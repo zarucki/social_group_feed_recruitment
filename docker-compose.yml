@@ -1,4 +1,32 @@
 version: '3'
 services:
-  mongodb:
-    image: mongo:3.6.11
+  mongo:
+    image: mongo:3.6.11 # cause 4.0 has weird license, and amazon documentDB is compatibile with 3.6
+    container_name: my-mongo # this is for convenience, but it is incompatible with couple options
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - local-network
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+    networks:
+      - local-network
+
+networks:
+  local-network:
+
+volumes:
+  mongodb-data:
