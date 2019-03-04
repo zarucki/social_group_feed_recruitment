@@ -1,4 +1,5 @@
 import mongo.MembershipService
+
 class MembershipServiceSpec extends MongoSpec {
   it should "should work in user direction" in {
     val sut = getSut()
@@ -24,6 +25,16 @@ class MembershipServiceSpec extends MongoSpec {
     } yield result
 
     assert(awaitResults(groupUserMembers) == Seq(user1.id, user2.id))
+  }
+
+  it should "should return empty if user has no group" in {
+    val sut = getSut()
+    assert(awaitResults(sut.getAllGroupsForUser(user1)) == Seq())
+  }
+
+  it should "should return if group has no users" in {
+    val sut = getSut()
+    assert(awaitResults(sut.getAllUsersForGroup(group1)) == Seq())
   }
 
   def getSut() = new MembershipService(mongoDB)
