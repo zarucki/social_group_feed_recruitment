@@ -13,6 +13,11 @@ object GroupUserMember {
       (compoundIndex(ascending(groupIdKey), ascending(userIdKey)), IndexOptions().unique(true))
     )
   )
+
+  implicit val groupUsersStoredInCollection = new StoredInCollection[GroupUserMember] {
+    override def collectionName: String = GroupUserMember.collection
+  }
+
 }
 
 case class GroupUserMember(

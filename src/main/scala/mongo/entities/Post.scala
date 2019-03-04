@@ -7,6 +7,10 @@ import org.mongodb.scala.bson.annotations.BsonProperty
 
 object Post {
   val collection: String = "posts"
+
+  implicit val postsStoredInCollection = new StoredInCollection[Post] {
+    override def collectionName: String = Post.collection
+  }
 }
 
 case class Post(

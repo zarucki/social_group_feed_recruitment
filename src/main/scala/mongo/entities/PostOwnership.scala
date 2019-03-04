@@ -14,6 +14,10 @@ object PostOwnership {
       (compoundIndex(ascending(ownerIdKey), descending(postIdKey)), IndexOptions().unique(true))
     )
   )
+
+  implicit val postOwnershipsStoredInCollection = new StoredInCollection[PostOwnership] {
+    override def collectionName: String = PostOwnership.collection
+  }
 }
 
 case class PostOwnership(
