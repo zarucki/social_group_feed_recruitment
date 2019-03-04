@@ -1,7 +1,7 @@
 package mongo
 
 import entities.MongoEntities._
-import entities.{GroupUserMember, UserGroup}
+import entities.{GroupId, GroupUserMember, UserGroup, UserId}
 import mongo.SimpleMongoEntityRepository.{GroupUserMembersRepo, UserGroupsRepo}
 import org.mongodb.scala.bson.collection.immutable.Document
 import org.mongodb.scala.model.Filters._
@@ -12,14 +12,14 @@ class MembershipService(mongoDatabase: MongoDatabase) {
   private val groupUserMembersRepo = new GroupUserMembersRepo(mongoDatabase)
   private val userGroupsRepo = new UserGroupsRepo(mongoDatabase)
 
-  def addUserToGroup(userId: String, groupId: String): Observable[Completed] = {
+  def addUserToGroup(userId: UserId, groupId: GroupId): Observable[Completed] = {
     // TODO: what to do on failure here?
     // TODO: maybe update user aggregate number about count of groups he is in
     // TODO: maybe update group aggregate number about count of users are there in
 
     // Here to fire off them at once
-    val userGroupsWrite = userGroupsRepo.put(UserGroup(userId = userId, groupId = groupId))
-    val groupUserMembersWrite = groupUserMembersRepo.put(GroupUserMember(groupId = groupId, userId = userId))
+    val userGroupsWrite = userGroupsRepo.put(UserGroup(userId.id, groupId.id))
+    val groupUserMembersWrite = groupUserMembersRepo.put(GroupUserMember(groupId.id, userId.id))
 
     for {
       _           <- userGroupsWrite
@@ -27,16 +27,16 @@ class MembershipService(mongoDatabase: MongoDatabase) {
     } yield writeResult
   }
 
-  def getAllGroupsForUser(userId: String): Observable[String] = {
+  def getAllGroupsForUser(userId: UserId): Observable[String] = {
     userGroupsRepo
-      .findByCondition[Document](equal(userIdKey, userId))
+      .findByCondition[Document](equal(userIdKey, userId.id))
       .projection(fields(excludeId(), include(groupIdKey)))
       .map(_.getString(groupIdKey))
   }
 
-  def getAllUsersForGroup(groupId: String): Observable[String] = {
+  def getAllUsersForGroup(groupId: GroupId): Observable[String] = {
     groupUserMembersRepo
-      .findByCondition[Document](equal(groupIdKey, groupId))
+      .findByCondition[Document](equal(groupIdKey, groupId.id))
       .projection(fields(excludeId(), include(userIdKey)))
       .map(_.getString(userIdKey))
   }

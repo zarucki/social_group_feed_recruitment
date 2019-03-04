@@ -1,12 +1,10 @@
 import java.time.{ZoneId, ZonedDateTime}
 
+import entities.{GroupId, UserId}
 import mongo.{MembershipService, PostsService}
 import services.FeedService
 
 class FeedServiceSpec extends MongoSpec {
-  val (user1, user2, user3) = ("user_1", "user_2", "user_3")
-  val (group1, group2, group3) = ("group_1", "group_2", "group_3")
-
   it should "should return feeds of multiple groups" in {
     val sut = getSut()
     val membershipService = getMembershipService()
@@ -73,16 +71,16 @@ class FeedServiceSpec extends MongoSpec {
 
     awaitResults(insertPosts)
 
-    assert(awaitResults(sut.getTopPostsFromAllGroupsFeedForUser("user_10", 10)) == Seq())
+    assert(awaitResults(sut.getTopPostsFromAllGroupsFeedForUser(UserId("10"), 10)) == Seq())
 
     assert(
       awaitResults(sut.getTopPostsFromAllGroupsFeedForUser(user1, postCount = 20))
         .map(p => (p._id.getTimestamp, p.content, p.groupId)) == List(
-        (1548633600, "yeah u 2", group1),
-        (1548550800, "nice 2 meet u", group1),
-        (1548548100, "yeah, the group is pretty much dead", group2),
-        (1548461700, "first post", group1),
-        (1548457200, "there is no content here", group2)
+        (1548633600, "yeah u 2", group1.id),
+        (1548550800, "nice 2 meet u", group1.id),
+        (1548548100, "yeah, the group is pretty much dead", group2.id),
+        (1548461700, "first post", group1.id),
+        (1548457200, "there is no content here", group2.id)
       )
     )
 
@@ -91,25 +89,25 @@ class FeedServiceSpec extends MongoSpec {
     assert(
       awaitResults(sut.getTopPostsFromAllGroupsFeedForUser(user1, postCount = 20))
         .map(p => (p._id.getTimestamp, p.content, p.groupId)) == List(
-        (1548633600, "yeah u 2", group1),
-        (1548550800, "nice 2 meet u", group1),
-        (1548548100, "yeah, the group is pretty much dead", group2),
-        (1548546300, "though they better come fast", group3),
-        (1548461700, "first post", group1),
-        (1548459900, "maybe someone will see my awesome content", group3),
-        (1548457200, "there is no content here", group2)
+        (1548633600, "yeah u 2", group1.id),
+        (1548550800, "nice 2 meet u", group1.id),
+        (1548548100, "yeah, the group is pretty much dead", group2.id),
+        (1548546300, "though they better come fast", group3.id),
+        (1548461700, "first post", group1.id),
+        (1548459900, "maybe someone will see my awesome content", group3.id),
+        (1548457200, "there is no content here", group2.id)
       )
     )
 
     assert(
       awaitResults(sut.getTopPostsFromAllGroupsFeedForUser(user1, postCount = 6))
         .map(p => (p._id.getTimestamp, p.content, p.groupId)) == List(
-        (1548633600, "yeah u 2", group1),
-        (1548550800, "nice 2 meet u", group1),
-        (1548548100, "yeah, the group is pretty much dead", group2),
-        (1548546300, "though they better come fast", group3),
-        (1548461700, "first post", group1),
-        (1548457200, "there is no content here", group2)
+        (1548633600, "yeah u 2", group1.id),
+        (1548550800, "nice 2 meet u", group1.id),
+        (1548548100, "yeah, the group is pretty much dead", group2.id),
+        (1548546300, "though they better come fast", group3.id),
+        (1548461700, "first post", group1.id),
+        (1548457200, "there is no content here", group2.id)
       )
     )
 
@@ -117,11 +115,11 @@ class FeedServiceSpec extends MongoSpec {
     assert(
       awaitResults(sut.getTopPostsFromAllGroupsFeedForUser(user1, postCount = 5))
         .map(p => (p._id.getTimestamp, p.content, p.groupId)) == List(
-        (1548633600, "yeah u 2", group1),
-        (1548550800, "nice 2 meet u", group1),
-        (1548548100, "yeah, the group is pretty much dead", group2),
-        (1548461700, "first post", group1),
-        (1548457200, "there is no content here", group2)
+        (1548633600, "yeah u 2", group1.id),
+        (1548550800, "nice 2 meet u", group1.id),
+        (1548548100, "yeah, the group is pretty much dead", group2.id),
+        (1548461700, "first post", group1.id),
+        (1548457200, "there is no content here", group2.id)
       )
     )
   }
@@ -176,10 +174,10 @@ class FeedServiceSpec extends MongoSpec {
       awaitResults(sut.getTopPostsFromAllGroupsFeedForUser(user1, postCount = 10))
         .map(p => (p._id.getTimestamp, p.content, p.groupId)) ==
         List(
-          (1549062000, "second group is much better", group2),
-          (1548979200, "second group is better", group2),
-          (1548896400, "second post", group1),
-          (1548807300, "first post", group1)
+          (1549062000, "second group is much better", group2.id),
+          (1548979200, "second group is better", group2.id),
+          (1548896400, "second post", group1.id),
+          (1548807300, "first post", group1.id)
         )
     )
 
@@ -187,8 +185,8 @@ class FeedServiceSpec extends MongoSpec {
       awaitResults(sut.getTopPostsFromAllGroupsFeedForUser(user1, postCount = 2))
         .map(p => (p._id.getTimestamp, p.content, p.groupId)) ==
         List(
-          (1548896400, "second post", group1),
-          (1548807300, "first post", group1)
+          (1548896400, "second post", group1.id),
+          (1548807300, "first post", group1.id)
         )
     )
   }

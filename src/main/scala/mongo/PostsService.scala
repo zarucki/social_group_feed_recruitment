@@ -4,7 +4,7 @@ import java.time._
 import java.util.Date
 
 import entities.MongoEntities._
-import entities.{Post, PostOwnership}
+import entities._
 import mongo.SimpleMongoEntityRepository.{PostOwnershipsRepo, PostRepo}
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.bson.collection.immutable.Document
@@ -20,10 +20,10 @@ class PostsService(mongoDatabase: MongoDatabase) {
 
   // TODO: this does not check permissions for writing to this group
   def addPostToGroup(
+      userId: UserId,
+      groupId: GroupId,
       content: String,
-      createdAt: ZonedDateTime,
-      userId: String,
-      groupId: String
+      createdAt: ZonedDateTime
   )(implicit clock: Clock): Observable[Completed] = {
     val postId = new ObjectId(Date.from(createdAt.toInstant))
 
@@ -31,15 +31,15 @@ class PostsService(mongoDatabase: MongoDatabase) {
       _id = postId,
       insertedAt = Instant.now(clock),
       content = content,
-      userId = userId,
-      groupId = groupId
+      userId = userId.id,
+      groupId = groupId.id
     )
 
     // On purpose everything is not stared at once, don't want to have ownership to non existing stuff inserted
     for {
       _          <- postsRepo.put(postToInsert)
-      _          <- postOwnershipsRepo.put(PostOwnership(groupId, postId))
-      lastInsert <- postOwnershipsRepo.put(PostOwnership(userId, postId))
+      _          <- postOwnershipsRepo.put(PostOwnership(groupId.id, postId))
+      lastInsert <- postOwnershipsRepo.put(PostOwnership(userId.id, postId))
     } yield lastInsert
   }
 
@@ -65,8 +65,8 @@ class PostsService(mongoDatabase: MongoDatabase) {
     }
   }
 
-  def getLatestPostsForOwners(ownerId: String, postCount: Int): Observable[Post] = {
-    getLatestPostsForOwners(Seq(ownerId), postCount)
+  def getLatestPostsForOwners(ownerId: MongoContentOwnerId, postCount: Int): Observable[Post] = {
+    getLatestPostsForOwners(Seq(ownerId.id), postCount)
   }
 
   def getLatestPostsForOwners(ownerIds: Seq[String], postCount: Int): Observable[Post] = {

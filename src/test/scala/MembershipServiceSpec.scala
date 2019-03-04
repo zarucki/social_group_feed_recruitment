@@ -4,26 +4,26 @@ class MembershipServiceSpec extends MongoSpec {
     val sut = getSut()
 
     val userGroups = for {
-      _      <- sut.addUserToGroup("user_1", "group_1")
-      _      <- sut.addUserToGroup("user_1", "group_2")
-      _      <- sut.addUserToGroup("user_2", "group_1")
-      result <- sut.getAllGroupsForUser("user_1")
+      _      <- sut.addUserToGroup(user1, group1)
+      _      <- sut.addUserToGroup(user1, group2)
+      _      <- sut.addUserToGroup(user2, group1)
+      result <- sut.getAllGroupsForUser(user1)
     } yield result
 
-    assert(awaitResults(userGroups) == Seq("group_1", "group_2"))
+    assert(awaitResults(userGroups) == Seq(group1.id, group2.id))
   }
 
   it should "should work in group direction" in {
     val sut = getSut()
 
     val groupUserMembers = for {
-      _      <- sut.addUserToGroup("user_1", "group_1")
-      _      <- sut.addUserToGroup("user_1", "group_2")
-      _      <- sut.addUserToGroup("user_2", "group_1")
-      result <- sut.getAllUsersForGroup("group_1")
+      _      <- sut.addUserToGroup(user1, group1)
+      _      <- sut.addUserToGroup(user1, group2)
+      _      <- sut.addUserToGroup(user2, group1)
+      result <- sut.getAllUsersForGroup(group1)
     } yield result
 
-    assert(awaitResults(groupUserMembers) == Seq("user_1", "user_2"))
+    assert(awaitResults(groupUserMembers) == Seq(user1.id, user2.id))
   }
 
   def getSut() = new MembershipService(mongoDB)
