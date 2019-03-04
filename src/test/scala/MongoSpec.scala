@@ -16,8 +16,8 @@ class MongoSpec extends UnitSpec with BeforeAndAfter with BeforeAndAfterAll {
 
   protected val utcZoneId = ZoneId.of("UTC")
   protected val fixedDateInPast = ZonedDateTime.of(2019, 2, 2, 0, 0, 0, 0, utcZoneId)
-  protected val (user1, user2, user3) = (UserId("1"), UserId("2"), UserId("3"))
-  protected val (group1, group2, group3) = (GroupId("1"), GroupId("2"), GroupId("3"))
+  protected val (user1, user2, user3, user4) = (UserId("1"), UserId("2"), UserId("3"), UserId("4"))
+  protected val (group1, group2, group3, emptyGroup) = (GroupId("1"), GroupId("2"), GroupId("3"), GroupId("4"))
 
   override def beforeAll() = {
     Logger.getLogger("org.mongodb.driver").setLevel(Level.WARNING)

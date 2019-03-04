@@ -19,6 +19,7 @@ class PostsService(mongoDatabase: MongoDatabase) {
   private val postOwnershipsRepo = new PostOwnershipsRepo(mongoDatabase)
 
   // TODO: this does not check permissions for writing to this group
+
   def addPostToGroup(
       userId: UserId,
       groupId: GroupId,
@@ -35,11 +36,16 @@ class PostsService(mongoDatabase: MongoDatabase) {
       groupId = groupId.id
     )
 
+    addPostToGroup(postToInsert)
+  }
+
+  // TODO: this does not check permissions for writing to this group
+  protected def addPostToGroup(post: Post): Observable[Completed] = {
     // On purpose everything is not stared at once, don't want to have ownership to non existing stuff inserted
     for {
-      _          <- postsRepo.put(postToInsert)
-      _          <- postOwnershipsRepo.put(PostOwnership(groupId.id, postId))
-      lastInsert <- postOwnershipsRepo.put(PostOwnership(userId.id, postId))
+      _          <- postsRepo.put(post)
+      _          <- postOwnershipsRepo.put(PostOwnership(post.groupId, post._id))
+      lastInsert <- postOwnershipsRepo.put(PostOwnership(post.userId, post._id))
     } yield lastInsert
   }
 
