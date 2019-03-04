@@ -41,6 +41,8 @@ class PostsServiceSpec extends MongoSpec {
     } yield ()
     awaitResults(insertPosts)
 
+    assert(awaitResults(sut.getLatestPostsForOwners("nonexistinguser", 2)).map(_.content) == Seq())
+
     assert(
       awaitResults(sut.getLatestPostsForOwners(group1, 10)).map(_.content) == Seq(
         "content 4 in group 1 from user 3",
@@ -64,5 +66,5 @@ class PostsServiceSpec extends MongoSpec {
     )
   }
 
-  def getSut() = new PostsService(getTestMongoDB)
+  def getSut() = new PostsService(mongoDB)
 }

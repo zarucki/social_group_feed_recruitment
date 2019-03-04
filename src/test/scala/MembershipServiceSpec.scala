@@ -26,5 +26,5 @@ class MembershipServiceSpec extends MongoSpec {
     assert(awaitResults(groupUserMembers) == Seq("user_1", "user_2"))
   }
 
-  def getSut() = new MembershipService(getTestMongoDB)
+  def getSut() = new MembershipService(mongoDB)
 }

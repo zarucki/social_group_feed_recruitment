@@ -10,28 +10,29 @@ import scala.concurrent.duration.Duration
 
 class MongoSpec extends UnitSpec with BeforeAndAfter with BeforeAndAfterAll {
   protected var mongoClient: MongoClient = _
+  protected var mongoDB: MongoDatabase = _
 
   override def beforeAll() = {
     Logger.getLogger("org.mongodb.driver").setLevel(Level.WARNING)
+    mongoClient = MongoService.getMongoClient("mongodb://root:example@localhost:27017")
+  }
+
+  override def afterAll(): Unit = {
+    mongoClient.close()
   }
 
   before {
-    mongoClient = MongoService.getMongoClient("mongodb://root:example@localhost:27017")
+    mongoDB = MongoService.getMongoDBWhichUnderstandsEntities(mongoClient, "test_db")
 
     val setup = for {
-      _ <- getTestMongoDB.drop()
-      _ <- MongoService.createIndexesIfMissing(getTestMongoDB)
+      _ <- mongoDB.drop()
+      _ <- MongoService.createIndexesIfMissing(mongoDB)
     } yield ()
     awaitResults(setup)
   }
 
   after {
-    awaitResults(getTestMongoDB.drop())
-    mongoClient.close()
-  }
-
-  protected def getTestMongoDB: MongoDatabase = {
-    MongoService.getMongoDBWhichUnderstandsEntities(mongoClient, "test_db")
+//    awaitResults(mongoDB.drop())
   }
 
   protected def awaitResults[TResult](

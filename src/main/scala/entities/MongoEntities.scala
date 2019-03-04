@@ -21,7 +21,7 @@ object Post {
 
 case class Post(
     _id: ObjectId, // date created is contained in the id - seconds from epoch
-    @BsonProperty("i") dateInserted: Instant,
+    @BsonProperty("i") insertedAt: Instant,
     @BsonProperty("p") content: String,
     @BsonProperty("uid") userId: OwnerId,
     @BsonProperty("gid") groupId: OwnerId // this could be None for user wall posts

@@ -29,7 +29,7 @@ class PostsService(mongoDatabase: MongoDatabase) {
 
     val postToInsert = Post(
       _id = postId,
-      dateInserted = Instant.now(clock),
+      insertedAt = Instant.now(clock),
       content = content,
       userId = userId,
       groupId = groupId
@@ -45,21 +45,24 @@ class PostsService(mongoDatabase: MongoDatabase) {
 
   def getLatestPostsIdsForOwners(ownerIds: Seq[String], postCount: Int): Observable[ObjectId] = {
     throwExceptionIfSequenceHasDuplicates(ownerIds)
-
-    val ownerFilter = if (ownerIds.tail.isEmpty) {
-      equal(ownerIdKey, ownerIds.head)
+    if (ownerIds.isEmpty) {
+      Observable(List.empty)
     } else {
-      in(ownerIdKey, ownerIds: _*)
+      val ownerFilter = if (ownerIds.tail.isEmpty) {
+        equal(ownerIdKey, ownerIds.head)
+      } else {
+        in(ownerIdKey, ownerIds: _*)
+      }
+
+      val latestPostsInGroup = postOwnershipsRepo
+        .findByCondition[Document](ownerFilter)
+        .limit(postCount)
+        .sort(orderBy(ascending(ownerIdKey), descending(postIdKey))) // TODO: this duplicates what is in index definition
+        .projection(fields(excludeId(), include(postIdKey)))
+        .map(_.getObjectId(postIdKey))
+
+      latestPostsInGroup
     }
-
-    val latestPostsInGroup = postOwnershipsRepo
-      .findByCondition[Document](ownerFilter)
-      .limit(postCount)
-      .sort(orderBy(ascending(ownerIdKey), descending(postIdKey))) // TODO: this duplicates what is in index definition
-      .projection(fields(excludeId(), include(postIdKey)))
-      .map(_.getObjectId(postIdKey))
-
-    latestPostsInGroup
   }
 
   def getLatestPostsForOwners(ownerId: String, postCount: Int): Observable[Post] = {
@@ -78,10 +81,14 @@ class PostsService(mongoDatabase: MongoDatabase) {
   def fetchPostsByIds(postIds: Seq[ObjectId]): Observable[Post] = {
     throwExceptionIfSequenceHasDuplicates(postIds)
 
-    postsRepo
-      .findByCondition[Post](in(_id, postIds: _*))
-      .limit(postIds.size)
-      .sort(descending(_id))
+    if (postIds.isEmpty) {
+      Observable(List.empty)
+    } else {
+      postsRepo
+        .findByCondition[Post](in(_id, postIds: _*))
+        .limit(postIds.size)
+        .sort(descending(_id))
+    }
   }
 
   def throwExceptionIfSequenceHasDuplicates[T](seq: Seq[T]) = {
