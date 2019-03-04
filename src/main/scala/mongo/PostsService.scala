@@ -43,7 +43,11 @@ class PostsService(mongoDatabase: MongoDatabase) {
     } yield lastInsert
   }
 
-  def getLatestPostsIdsForOwners(ownerIds: Seq[String], postCount: Int): Observable[ObjectId] = {
+  def getLatestPostsIdsForOwners(
+      ownerIds: Seq[String],
+      after: ObjectId,
+      before: Option[ObjectId] = None
+  ): Observable[ObjectId] = {
     throwExceptionIfSequenceHasDuplicates(ownerIds)
     if (ownerIds.isEmpty) {
       Observable(List.empty)
@@ -54,9 +58,15 @@ class PostsService(mongoDatabase: MongoDatabase) {
         in(ownerIdKey, ownerIds: _*)
       }
 
+      val afterFilter = gte(postIdKey, after)
+      val timeFilter = before
+        .map { beforeObjectId =>
+          and(gte(postIdKey, after), lt(postIdKey, beforeObjectId))
+        }
+        .getOrElse(afterFilter)
+
       val latestPostsInGroup = postOwnershipsRepo
-        .findByCondition[Document](ownerFilter)
-        .limit(postCount)
+        .findByCondition[Document](and(ownerFilter, timeFilter))
         .sort(orderBy(ascending(ownerIdKey), descending(postIdKey))) // TODO: this duplicates what is in index definition
         .projection(fields(excludeId(), include(postIdKey)))
         .map(_.getObjectId(postIdKey))
@@ -65,15 +75,19 @@ class PostsService(mongoDatabase: MongoDatabase) {
     }
   }
 
-  def getLatestPostsForOwners(ownerId: MongoContentOwnerId, postCount: Int): Observable[Post] = {
-    getLatestPostsForOwners(Seq(ownerId.id), postCount)
+  def getLatestPostsForOwners(ownerId: MongoContentOwnerId, after: Instant): Observable[Post] = {
+    getLatestPostsForOwners(Seq(ownerId.id), after)
   }
 
-  def getLatestPostsForOwners(ownerIds: Seq[String], postCount: Int): Observable[Post] = {
+  def getLatestPostsForOwners(ownerIds: Seq[String], after: Instant): Observable[Post] = {
+    getPostsForOwners(ownerIds, after = new ObjectId(Date.from(after)))
+  }
+
+  def getPostsForOwners(ownerIds: Seq[String], after: ObjectId, before: Option[ObjectId] = None): Observable[Post] = {
     throwExceptionIfSequenceHasDuplicates(ownerIds)
 
     for {
-      postIds     <- getLatestPostsIdsForOwners(ownerIds, postCount).collect()
+      postIds     <- getLatestPostsIdsForOwners(ownerIds, after, before).collect()
       fetchedPost <- fetchPostsByIds(postIds)
     } yield fetchedPost
   }

@@ -1,48 +1,53 @@
 import java.time.{Instant, ZoneId, ZonedDateTime}
+import java.util.Date
 
 import mongo.PostsService
 import mongo.entities.UserId
+import org.mongodb.scala.bson.ObjectId
 
 class PostsServiceSpec extends MongoSpec {
   it should "should return correct posts in correct order" in {
     val sut = getSut()
 
-    implicit val clock = java.time.Clock.fixed(Instant.now(), ZoneId.of("UTC"))
-
-    val now = ZonedDateTime.now(clock)
+    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
 
     val insertPosts = for {
       _ <- sut.addPostToGroup(
         content = "content 1 in group 1 from user 1",
-        createdAt = now.minusHours(1),
+        createdAt = fixedDateInPast.minusHours(1),
         userId = user1,
         groupId = group1
       )
       _ <- sut.addPostToGroup(
         content = "content 2 in group 1 from user 1",
-        createdAt = now.minusHours(2),
+        createdAt = fixedDateInPast.minusHours(2),
         userId = user2,
         groupId = group1
       )
       _ <- sut.addPostToGroup(
         content = "content 3 in group 2 from user 1",
-        createdAt = now.minusHours(3),
+        createdAt = fixedDateInPast.minusHours(3),
         userId = user1,
         groupId = group2
       )
       _ <- sut.addPostToGroup(
         content = "content 4 in group 1 from user 3",
-        createdAt = now.minusMinutes(15),
+        createdAt = fixedDateInPast.minusMinutes(15),
         userId = user3,
         groupId = group1
       )
     } yield ()
     awaitResults(insertPosts)
 
-    assert(awaitResults(sut.getLatestPostsForOwners(UserId("nonexistinguser"), 2)).map(_.content) == Seq())
+    assert(
+      awaitResults(
+        sut.getLatestPostsForOwners(UserId("nonexistinguser"), after = fixedDateInPast.minusDays(7).toInstant)
+      ).map(_.content) == Seq()
+    )
 
     assert(
-      awaitResults(sut.getLatestPostsForOwners(group1, 10)).map(_.content) == Seq(
+      awaitResults(sut.getLatestPostsForOwners(group1, after = fixedDateInPast.minusDays(7).toInstant))
+        .map(_.content) == Seq(
         "content 4 in group 1 from user 3",
         "content 1 in group 1 from user 1",
         "content 2 in group 1 from user 1"
@@ -50,14 +55,16 @@ class PostsServiceSpec extends MongoSpec {
     )
 
     assert(
-      awaitResults(sut.getLatestPostsForOwners(group1, 2)).map(_.content) == Seq(
+      awaitResults(sut.getLatestPostsForOwners(group1, after = fixedDateInPast.minusMinutes(90).toInstant))
+        .map(_.content) == Seq(
         "content 4 in group 1 from user 3",
         "content 1 in group 1 from user 1"
       )
     )
 
     assert(
-      awaitResults(sut.getLatestPostsForOwners(user1, 100)).map(_.content) == Seq(
+      awaitResults(sut.getLatestPostsForOwners(user1, after = fixedDateInPast.minusDays(7).toInstant))
+        .map(_.content) == Seq(
         "content 1 in group 1 from user 1",
         "content 3 in group 2 from user 1"
       )
