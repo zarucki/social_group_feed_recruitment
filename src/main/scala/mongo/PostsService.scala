@@ -3,7 +3,7 @@ package mongo
 import java.time._
 import java.util.Date
 
-import entities.MongoEntities._
+import entities.MongoKeyNames._
 import entities._
 import mongo.SimpleMongoEntityRepository.{PostOwnershipsRepo, PostRepo}
 import org.mongodb.scala.bson.ObjectId

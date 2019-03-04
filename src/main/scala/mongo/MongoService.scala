@@ -1,7 +1,7 @@
 package mongo
 
 import com.mongodb.ConnectionString
-import mongo.entities.MongoEntities._
+import mongo.entities.MongoKeyNames._
 import mongo.entities._
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
 import org.mongodb.scala.bson.codecs.DEFAULT_CODEC_REGISTRY

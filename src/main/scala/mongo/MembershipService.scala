@@ -1,6 +1,6 @@
 package mongo
 
-import entities.MongoEntities._
+import entities.MongoKeyNames._
 import entities.{GroupId, GroupUserMember, UserGroup, UserId}
 import mongo.SimpleMongoEntityRepository.{GroupUserMembersRepo, UserGroupsRepo}
 import org.mongodb.scala.bson.collection.immutable.Document
