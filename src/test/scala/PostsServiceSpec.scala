@@ -1,9 +1,5 @@
-import java.time.{Instant, ZoneId, ZonedDateTime}
-import java.util.Date
-
 import mongo.PostsService
 import mongo.entities.UserId
-import org.mongodb.scala.bson.ObjectId
 
 class PostsServiceSpec extends MongoSpec {
   it should "should return correct posts in correct order" in {

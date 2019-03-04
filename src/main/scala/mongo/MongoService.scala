@@ -1,16 +1,15 @@
 package mongo
 
 import com.mongodb.ConnectionString
-import entities.MongoEntities._
-import entities._
-import org.mongodb.scala.bson.collection.immutable.Document
-import org.mongodb.scala.{MongoClient, MongoClientSettings, MongoDatabase, Observable, SingleObservable}
-import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.IndexOptions
-import org.mongodb.scala.model.Indexes._
+import mongo.entities.MongoEntities._
+import mongo.entities._
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
 import org.mongodb.scala.bson.codecs.DEFAULT_CODEC_REGISTRY
 import org.mongodb.scala.bson.codecs.Macros._
+import org.mongodb.scala.bson.conversions.Bson
+import org.mongodb.scala.model.IndexOptions
+import org.mongodb.scala.model.Indexes._
+import org.mongodb.scala.{MongoClient, MongoClientSettings, MongoDatabase, Observable, SingleObservable}
 
 // TODO: rename this
 object MongoService {
