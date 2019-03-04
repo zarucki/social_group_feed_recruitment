@@ -1,6 +1,6 @@
 import java.time.{ZoneId, ZonedDateTime}
 
-import entities.{GroupId, UserId}
+import mongo.entities.{GroupId, UserId}
 import mongo.{MembershipService, PostsService}
 import services.FeedService
 

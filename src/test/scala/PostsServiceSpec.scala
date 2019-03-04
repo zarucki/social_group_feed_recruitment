@@ -1,7 +1,7 @@
 import java.time.{Instant, ZoneId, ZonedDateTime}
 
-import entities.UserId
 import mongo.PostsService
+import mongo.entities.UserId
 
 class PostsServiceSpec extends MongoSpec {
   it should "should return correct posts in correct order" in {

@@ -1,7 +1,7 @@
 package services
 import java.time.{Clock, ZonedDateTime}
 
-import entities.{GroupId, Post, UserId}
+import mongo.entities.{GroupId, Post, UserId}
 import mongo.{MembershipService, PostsService}
 import org.mongodb.scala.{Completed, MongoDatabase, Observable}
 

@@ -1,7 +1,7 @@
 import java.util.concurrent.TimeUnit
 import java.util.logging.{Level, Logger}
 
-import entities.{GroupId, UserId}
+import mongo.entities.{GroupId, UserId}
 import mongo.MongoService
 import org.mongodb.scala.{MongoClient, MongoDatabase, Observable}
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}

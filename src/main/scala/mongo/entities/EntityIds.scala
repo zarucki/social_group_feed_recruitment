@@ -1,4 +1,4 @@
-package entities
+package mongo.entities
 
 sealed trait MongoEntityId {
   def id: String
