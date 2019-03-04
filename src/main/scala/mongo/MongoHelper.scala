@@ -1,20 +1,18 @@
 package mongo
 
 import com.mongodb.ConnectionString
-import mongo.entities.MongoKeyNames._
 import mongo.entities._
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
 import org.mongodb.scala.bson.codecs.DEFAULT_CODEC_REGISTRY
 import org.mongodb.scala.bson.codecs.Macros._
-import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.IndexOptions
-import org.mongodb.scala.model.Indexes._
 import org.mongodb.scala.{MongoClient, MongoClientSettings, MongoDatabase, Observable, SingleObservable}
 
-// TODO: rename this
-object MongoService {
-
-  case class IndexThatShouldBePresent(indexName: String, indexDefinition: (Bson, IndexOptions))
+object MongoHelper {
+  private val collectionAndTheirIndexes = Map(
+    UserGroup.collection -> UserGroup.indexes,
+    GroupUserMember.collection -> GroupUserMember.indexes,
+    PostOwnership.collection -> PostOwnership.indexes
+  )
 
   def getMongoClient(connectionString: String): MongoClient = {
     val settings: MongoClientSettings = MongoClientSettings
@@ -81,26 +79,4 @@ object MongoService {
       }
     }
   }
-
-  // TODO: move it somewhere closer to collection definition
-  private def collectionAndTheirIndexes = Map(
-    UserGroup.collection -> Seq(
-      IndexThatShouldBePresent(
-        s"index_${userIdKey}_1_${groupIdKey}_1",
-        (compoundIndex(ascending(userIdKey), ascending(groupIdKey)), IndexOptions().unique(true))
-      )
-    ),
-    GroupUserMember.collection -> Seq(
-      IndexThatShouldBePresent(
-        s"index_${groupIdKey}_1_${userIdKey}_1",
-        (compoundIndex(ascending(groupIdKey), ascending(userIdKey)), IndexOptions().unique(true))
-      )
-    ),
-    PostOwnership.collection -> Seq(
-      IndexThatShouldBePresent(
-        s"index_${ownerIdKey}_1_${postIdKey}_-1",
-        (compoundIndex(ascending(ownerIdKey), descending(postIdKey)), IndexOptions().unique(true))
-      )
-    )
-  )
 }

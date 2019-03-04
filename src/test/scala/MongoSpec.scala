@@ -1,7 +1,7 @@
 import java.time.{ZoneId, ZonedDateTime}
 import java.util.concurrent.TimeUnit
 
-import mongo.MongoService
+import mongo.MongoHelper
 import mongo.entities.{GroupId, UserId}
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.core.config.Configurator
@@ -23,7 +23,7 @@ class MongoSpec extends UnitSpec with BeforeAndAfter with BeforeAndAfterAll {
   override def beforeAll() = {
     Configurator.setLevel("org.mongodb.driver", Level.WARN)
 
-    mongoClient = MongoService.getMongoClient("mongodb://root:example@localhost:27017")
+    mongoClient = MongoHelper.getMongoClient("mongodb://root:example@localhost:27017")
   }
 
   override def afterAll(): Unit = {
@@ -31,11 +31,11 @@ class MongoSpec extends UnitSpec with BeforeAndAfter with BeforeAndAfterAll {
   }
 
   before {
-    mongoDB = MongoService.getMongoDBWhichUnderstandsEntities(mongoClient, "test_db")
+    mongoDB = MongoHelper.getMongoDBWhichUnderstandsEntities(mongoClient, "test_db")
 
     val setup = for {
       _ <- mongoDB.drop()
-      _ <- MongoService.createIndexesIfMissing(mongoDB)
+      _ <- MongoHelper.createIndexesIfMissing(mongoDB)
     } yield ()
     awaitResults(setup)
   }
