@@ -55,6 +55,7 @@ class PostsService(mongoDatabase: MongoDatabase) {
       before: Option[ObjectId] = None
   ): Observable[ObjectId] = {
     throwExceptionIfSequenceHasDuplicates(ownerIds)
+
     if (ownerIds.isEmpty) {
       Observable(List.empty)
     } else {
@@ -67,7 +68,7 @@ class PostsService(mongoDatabase: MongoDatabase) {
       val afterFilter = gte(postIdKey, after)
       val timeFilter = before
         .map { beforeObjectId =>
-          and(gte(postIdKey, after), lt(postIdKey, beforeObjectId))
+          and(afterFilter, lt(postIdKey, beforeObjectId))
         }
         .getOrElse(afterFilter)
 
@@ -113,6 +114,7 @@ class PostsService(mongoDatabase: MongoDatabase) {
 
   def throwExceptionIfSequenceHasDuplicates[T](seq: Seq[T]) = {
     if (seq.toSet.size != seq.size) {
+      println("There are duplicates in: " + seq)
       throw new Exception("Probably something weird happening, cause I got duplicates in: " + seq)
     }
   }

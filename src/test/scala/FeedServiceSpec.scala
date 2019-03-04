@@ -1,4 +1,4 @@
-import java.time.ZoneId
+import java.time.{ZoneId, Duration => JDuration}
 
 import mongo.entities.{Post, UserId}
 import mongo.{MembershipService, PostsService}
@@ -183,6 +183,114 @@ class FeedServiceSpec extends MongoSpec {
           (1548979200, "second group is better", group2.id),
           (1548896400, "second post", group1.id)
         )
+    )
+  }
+
+  it should "correctly fetch requested number of posts with hour sliding" in {
+    oneUserTwoGroupsDataSetup()
+
+    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
+
+    assert(
+      awaitResults(
+        sut.getTopPostsFromAllUserGroups(
+          user1,
+          untilPostCount = 4,
+          noLaterThan = fixedDateInPast.minusDays(7).toInstant,
+          timeSpanRequestedInOneRequest = JDuration.ofHours(1)
+        )
+      ).map(postToTestTuple) ==
+        List(
+          (1549062000, "second group is much better", group2.id),
+          (1548979200, "second group is better", group2.id),
+          (1548896400, "second post", group1.id),
+          (1548807300, "first post", group1.id)
+        )
+    )
+  }
+
+  it should "correctly fetch requested number of posts with daily sliding" in {
+    oneUserTwoGroupsDataSetup()
+
+    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
+
+    assert(
+      awaitResults(
+        sut.getTopPostsFromAllUserGroups(
+          user1,
+          untilPostCount = 4,
+          noLaterThan = fixedDateInPast.minusDays(7).toInstant,
+          timeSpanRequestedInOneRequest = JDuration.ofDays(1)
+        )
+      ).map(postToTestTuple) ==
+        List(
+          (1549062000, "second group is much better", group2.id),
+          (1548979200, "second group is better", group2.id),
+          (1548896400, "second post", group1.id),
+          (1548807300, "first post", group1.id)
+        )
+    )
+  }
+
+  it should "return all post if found even though it couldn't fulfill whole count" in {
+    oneUserTwoGroupsDataSetup()
+
+    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
+
+    assert(
+      awaitResults(
+        sut.getTopPostsFromAllUserGroups(
+          user1,
+          untilPostCount = 10,
+          noLaterThan = fixedDateInPast.minusDays(7).toInstant,
+          timeSpanRequestedInOneRequest = JDuration.ofDays(1)
+        )
+      ).map(postToTestTuple) ==
+        List(
+          (1549062000, "second group is much better", group2.id),
+          (1548979200, "second group is better", group2.id),
+          (1548896400, "second post", group1.id),
+          (1548807300, "first post", group1.id)
+        )
+    )
+  }
+
+  it should "return only requested count even if there are more" in {
+    oneUserTwoGroupsDataSetup()
+
+    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
+
+    assert(
+      awaitResults(
+        sut.getTopPostsFromAllUserGroups(
+          user1,
+          untilPostCount = 3,
+          noLaterThan = fixedDateInPast.minusDays(7).toInstant,
+          timeSpanRequestedInOneRequest = JDuration.ofDays(1)
+        )
+      ).map(postToTestTuple) ==
+        List(
+          (1549062000, "second group is much better", group2.id),
+          (1548979200, "second group is better", group2.id),
+          (1548896400, "second post", group1.id)
+        )
+    )
+  }
+
+  it should "return empty if it cannot fulfill requested count but search whole space" in {
+    oneUserTwoGroupsDataSetup()
+
+    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
+
+    assert(
+      awaitResults(
+        sut.getTopPostsFromAllUserGroups(
+          UserId("10"),
+          untilPostCount = 1,
+          noLaterThan = fixedDateInPast.minusDays(14).toInstant,
+          timeSpanRequestedInOneRequest = JDuration.ofDays(1)
+        )
+      ).map(postToTestTuple) == List()
     )
   }
 
