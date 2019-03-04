@@ -1,9 +1,10 @@
 import java.time.{ZoneId, ZonedDateTime}
 import java.util.concurrent.TimeUnit
-import java.util.logging.{Level, Logger}
 
-import mongo.entities.{GroupId, UserId}
 import mongo.MongoService
+import mongo.entities.{GroupId, UserId}
+import org.apache.logging.log4j.Level
+import org.apache.logging.log4j.core.config.Configurator
 import org.mongodb.scala.{MongoClient, MongoDatabase, Observable}
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 
@@ -20,7 +21,8 @@ class MongoSpec extends UnitSpec with BeforeAndAfter with BeforeAndAfterAll {
   protected val (group1, group2, group3, emptyGroup) = (GroupId("1"), GroupId("2"), GroupId("3"), GroupId("4"))
 
   override def beforeAll() = {
-    Logger.getLogger("org.mongodb.driver").setLevel(Level.WARNING)
+    Configurator.setLevel("org.mongodb.driver", Level.WARN)
+
     mongoClient = MongoService.getMongoClient("mongodb://root:example@localhost:27017")
   }
 
