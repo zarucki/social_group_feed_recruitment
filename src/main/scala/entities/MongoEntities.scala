@@ -1,45 +1,57 @@
 package entities
-import java.time.LocalDateTime
+import java.time.Instant
 
+import entities.MongoEntities.OwnerId
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.bson.annotations.BsonProperty
 
 object MongoEntities {
+  val _id: String = "_id"
   val userIdKey: String = "uid"
   val groupIdKey: String = "gid"
+  val ownerIdKey: String = "oid"
+  val postIdKey: String = "pid"
 
+  type OwnerId = String
 }
 
-object GroupPost {
-  val collection: String = "group_posts"
+object Post {
+  val collection: String = "posts"
 }
 
-case class GroupPost(
-    _id: ObjectId,
-    @BsonProperty("c") dateCreated: LocalDateTime,
-    @BsonProperty("p") post: String,
-    @BsonProperty("uid") userId: String,
-    @BsonProperty("gid") groupId: String
+case class Post(
+    _id: ObjectId, // date created is contained in the id - seconds from epoch
+    @BsonProperty("i") dateInserted: Instant,
+    @BsonProperty("p") content: String,
+    @BsonProperty("uid") userId: OwnerId,
+    @BsonProperty("gid") groupId: OwnerId // this could be None for user wall posts
 )
 
-object UserGroups {
+object PostOwnership {
+  val collection: String = "post_ownerships"
+}
+
+case class PostOwnership(
+    @BsonProperty("oid") ownerId: OwnerId,
+    @BsonProperty("pid") postId: ObjectId
+)
+
+object UserGroup {
   val collection: String = "user_groups"
 }
 
-case class UserGroups(
-    _id: ObjectId,
-    @BsonProperty("uid") userId: String,
-    @BsonProperty("gid") groupId: String
+case class UserGroup(
+    @BsonProperty("uid") userId: OwnerId,
+    @BsonProperty("gid") groupId: OwnerId
 )
 
-object GroupUserMembers {
+object GroupUserMember {
   val collection: String = "group_user_members"
 }
 
-case class GroupUserMembers(
-    _id: ObjectId,
-    @BsonProperty("gid") groupId: String,
-    @BsonProperty("uid") userId: String
+case class GroupUserMember(
+    @BsonProperty("gid") groupId: OwnerId,
+    @BsonProperty("uid") userId: OwnerId
 )
 
 case class Author(_id: ObjectId, userId: String, userDisplayName: String)

@@ -2,11 +2,12 @@ package mongo
 
 import com.mongodb.ConnectionString
 import entities.MongoEntities._
-import entities.{MongoEntities, GroupPost, GroupUserMembers, UserGroups}
+import entities._
 import org.mongodb.scala.bson.collection.immutable.Document
-import org.mongodb.scala.{MongoClient, MongoClientSettings, MongoDatabase, Observable}
+import org.mongodb.scala.{MongoClient, MongoClientSettings, MongoDatabase, Observable, SingleObservable}
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.IndexOptions
+import org.mongodb.scala.model.Indexes._
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
 import org.mongodb.scala.bson.codecs.DEFAULT_CODEC_REGISTRY
 import org.mongodb.scala.bson.codecs.Macros._
@@ -26,11 +27,13 @@ object MongoService {
   }
 
   def getMongoDBWhichUnderstandsEntities(mongoClient: MongoClient, dbName: String): MongoDatabase = {
+    // TODO: make list of those entities in a better way
     val codecRegistry = fromRegistries(
       fromProviders(
-        classOf[GroupPost],
-        classOf[UserGroups],
-        classOf[GroupUserMembers]
+        classOf[Post],
+        classOf[UserGroup],
+        classOf[GroupUserMember],
+        classOf[PostOwnership]
       ),
       DEFAULT_CODEC_REGISTRY
     )
@@ -38,22 +41,28 @@ object MongoService {
     mongoClient.getDatabase(dbName).withCodecRegistry(codecRegistry)
   }
 
+  // TODO: test this?
   def createIndexesIfMissing(mongoDatabase: MongoDatabase): Observable[String] = {
-    indexesThatShouldBePresent.foldLeft[Observable[String]](Observable(List.empty)) {
+    val collectionAndIndexSeq: Seq[(String, IndexThatShouldBePresent)] = collectionAndTheirIndexes.toSeq.flatMap {
+      case (collection, indexes) => indexes.map(collection -> _)
+    }
+
+    collectionAndIndexSeq.foldLeft[Observable[String]](Observable(List.empty)) {
       case (aggr, (collectionName, indexToCheck)) =>
-        aggr.collect().flatMap { currentList =>
-          checkIfNecessaryIndexesArePresent(mongoDatabase, collectionName, indexToCheck).collect().flatMap { newList =>
-            Observable(currentList ++ newList)
-          }
-        }
+        for {
+          newMessageList     <- checkIfNecessaryIndexesArePresent(mongoDatabase, collectionName, indexToCheck)
+          currentMessageList <- aggr.collect()
+          result             <- Observable(currentMessageList :+ newMessageList)
+        } yield result
     }
   }
 
+  // Returns message after operation
   private def checkIfNecessaryIndexesArePresent(
       mongoDatabase: MongoDatabase,
       collectionName: String,
       indexThatShouldBePresent: IndexThatShouldBePresent
-  ): Observable[String] = {
+  ): SingleObservable[String] = {
     val collection = mongoDatabase.getCollection(collectionName)
     val (indexKey, indexOptions) = indexThatShouldBePresent.indexDefinition
 
@@ -63,8 +72,8 @@ object MongoService {
 
     allCollectionIndexesNames.collect().flatMap { indexNames =>
       if (indexNames.exists(_ == indexThatShouldBePresent.indexName)) {
-        Observable(
-          Seq(s"Index ${indexThatShouldBePresent.indexName} was already present on collection ${collectionName}.")
+        SingleObservable(
+          s"Index ${indexThatShouldBePresent.indexName} was already present on collection ${collectionName}."
         )
       } else {
         collection.createIndex(indexKey, indexOptions.name(indexThatShouldBePresent.indexName)).map { o =>
@@ -74,14 +83,25 @@ object MongoService {
     }
   }
 
-  private def indexesThatShouldBePresent = Map(
-    UserGroups.collection -> IndexThatShouldBePresent(
-      s"index_${userIdKey}_1_${groupIdKey}_1",
-      (Document(userIdKey -> 1, groupIdKey -> 1), IndexOptions().unique(true))
+  // TODO: move it somewhere closer to collection definition
+  private def collectionAndTheirIndexes = Map(
+    UserGroup.collection -> Seq(
+      IndexThatShouldBePresent(
+        s"index_${userIdKey}_1_${groupIdKey}_1",
+        (compoundIndex(ascending(userIdKey), ascending(groupIdKey)), IndexOptions().unique(true))
+      )
     ),
-    GroupUserMembers.collection -> IndexThatShouldBePresent(
-      s"index_${groupIdKey}_1_${userIdKey}_1",
-      (Document(groupIdKey -> 1, userIdKey -> 1), IndexOptions().unique(true))
+    GroupUserMember.collection -> Seq(
+      IndexThatShouldBePresent(
+        s"index_${groupIdKey}_1_${userIdKey}_1",
+        (compoundIndex(ascending(groupIdKey), ascending(userIdKey)), IndexOptions().unique(true))
+      )
+    ),
+    PostOwnership.collection -> Seq(
+      IndexThatShouldBePresent(
+        s"index_${ownerIdKey}_1_${postIdKey}_-1",
+        (compoundIndex(ascending(ownerIdKey), descending(postIdKey)), IndexOptions().unique(true))
+      )
     )
   )
 }

@@ -9,34 +9,35 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class MongoSpec extends UnitSpec with BeforeAndAfter with BeforeAndAfterAll {
-	protected var mongoClient: MongoClient = _
+  protected var mongoClient: MongoClient = _
 
-	override def beforeAll() = {
-		Logger.getLogger( "org.mongodb.driver" ).setLevel(Level.WARNING)
-	}
+  override def beforeAll() = {
+    Logger.getLogger("org.mongodb.driver").setLevel(Level.WARNING)
+  }
 
-	before {
-		mongoClient =	MongoService.getMongoClient("mongodb://root:example@localhost:27017")
-		val setup = for {
-		_ <- getTestMongoDB.drop()
-		_ <- MongoService.createIndexesIfMissing(getTestMongoDB)
-		} yield ()
-		awaitResults(setup)
-	}
+  before {
+    mongoClient = MongoService.getMongoClient("mongodb://root:example@localhost:27017")
 
-	after {
-		awaitResults(getTestMongoDB.drop())
-		mongoClient.close()
-	}
+    val setup = for {
+      _ <- getTestMongoDB.drop()
+      _ <- MongoService.createIndexesIfMissing(getTestMongoDB)
+    } yield ()
+    awaitResults(setup)
+  }
 
-	protected def getTestMongoDB: MongoDatabase = {
-		MongoService.getMongoDBWhichUnderstandsEntities(mongoClient, "test_db")
-	}
+  after {
+    awaitResults(getTestMongoDB.drop())
+    mongoClient.close()
+  }
 
-	protected def awaitResults[TResult](
-		observable: Observable[TResult],
-		duration: Duration = Duration(10, TimeUnit.SECONDS)
-	): Seq[TResult] = {
-		Await.result(observable.toFuture(), duration)
-	}
+  protected def getTestMongoDB: MongoDatabase = {
+    MongoService.getMongoDBWhichUnderstandsEntities(mongoClient, "test_db")
+  }
+
+  protected def awaitResults[TResult](
+      observable: Observable[TResult],
+      duration: Duration = Duration(10, TimeUnit.SECONDS)
+  ): Seq[TResult] = {
+    Await.result(observable.toFuture(), duration)
+  }
 }

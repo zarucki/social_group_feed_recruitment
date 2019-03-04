@@ -5,15 +5,19 @@ trait StoredInCollection[A] {
 }
 
 object StoredInCollection {
-  implicit val groupPostStoredInCollection = new StoredInCollection[GroupPost] {
-    override def collectionName: String = GroupPost.collection
+  implicit val postsStoredInCollection = new StoredInCollection[Post] {
+    override def collectionName: String = Post.collection
   }
 
-  implicit val userGroupsStoredInCollection = new StoredInCollection[UserGroups] {
-    override def collectionName: String = UserGroups.collection
+  implicit val userGroupsStoredInCollection = new StoredInCollection[UserGroup] {
+    override def collectionName: String = UserGroup.collection
   }
 
-  implicit val storedInCollection = new StoredInCollection[GroupUserMembers] {
-    override def collectionName: String = GroupUserMembers.collection
+  implicit val groupUsersStoredInCollection = new StoredInCollection[GroupUserMember] {
+    override def collectionName: String = GroupUserMember.collection
+  }
+
+  implicit val postOwnershipsStoredInCollection = new StoredInCollection[PostOwnership] {
+    override def collectionName: String = PostOwnership.collection
   }
 }

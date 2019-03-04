@@ -1,5 +1,5 @@
 package mongo
-import entities.{GroupPost, GroupUserMembers, StoredInCollection, UserGroups}
+import entities._
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.{Completed, FindObservable, MongoCollection, MongoDatabase, Observable}
 
@@ -25,9 +25,10 @@ abstract class MongoEntityRepository[TEntity](mongoDatabase: MongoDatabase)(
 }
 
 object SimpleMongoEntityRepository {
-  type GroupPostRepo = SimpleMongoEntityRepository[GroupPost]
-  type GroupUserMembersRepo = SimpleMongoEntityRepository[GroupUserMembers]
-  type UserGroupsRepo = SimpleMongoEntityRepository[UserGroups]
+  type PostRepo = SimpleMongoEntityRepository[Post]
+  type GroupUserMembersRepo = SimpleMongoEntityRepository[GroupUserMember]
+  type UserGroupsRepo = SimpleMongoEntityRepository[UserGroup]
+  type PostOwnershipsRepo = SimpleMongoEntityRepository[PostOwnership]
 }
 
 class SimpleMongoEntityRepository[TEntity](mongoDatabase: MongoDatabase)(

@@ -3,6 +3,7 @@ services:
   mongo:
     image: mongo:3.6.11 # cause 4.0 has weird license, and amazon documentDB is compatibile with 3.6
     container_name: my-mongo # this is for convenience, but it is incompatible with couple options
+    command: --profile 1 --slowms 0
     restart: always
     ports:
       - 27017:27017

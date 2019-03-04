@@ -1,6 +1,5 @@
-import services.MongoMembershipService
-
-class MembershipSpec extends MongoSpec {
+import mongo.MembershipService
+class MembershipServiceSpec extends MongoSpec {
   it should "should work in user direction" in {
     val sut = getSut()
 
@@ -27,5 +26,5 @@ class MembershipSpec extends MongoSpec {
     assert(awaitResults(groupUserMembers) == Seq("user_1", "user_2"))
   }
 
-  def getSut() = new MongoMembershipService(getTestMongoDB)
+  def getSut() = new MembershipService(getTestMongoDB)
 }
