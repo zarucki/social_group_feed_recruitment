@@ -23,49 +23,49 @@ class FeedServiceSpec extends MongoSpec {
     awaitResults(setupMemberships)
     val utcZoneId = ZoneId.of("UTC")
 
-    val now = ZonedDateTime.of(2019, 2, 2, 0, 0, 0, 0, utcZoneId)
-    implicit val clock = java.time.Clock.fixed(now.toInstant, utcZoneId)
+    val dateInPast = ZonedDateTime.of(2019, 2, 2, 0, 0, 0, 0, utcZoneId)
+    implicit val clock = java.time.Clock.fixed(dateInPast.toInstant, utcZoneId)
 
     val insertPosts = for {
       _ <- postService.addPostToGroup(
         content = "first post",
-        createdAt = now.minusDays(7).plusMinutes(15),
+        createdAt = dateInPast.minusDays(7).plusMinutes(15),
         userId = user1,
         groupId = group1
       )
       _ <- postService.addPostToGroup(
         content = "nice 2 meet u",
-        createdAt = now.minusDays(6).plusHours(1),
+        createdAt = dateInPast.minusDays(6).plusHours(1),
         userId = user2,
         groupId = group1
       )
       _ <- postService.addPostToGroup(
         content = "yeah u 2",
-        createdAt = now.minusDays(5),
+        createdAt = dateInPast.minusDays(5),
         userId = user1,
         groupId = group1
       )
       _ <- postService.addPostToGroup(
         content = "there is no content here",
-        createdAt = now.minusDays(7).minusHours(1),
+        createdAt = dateInPast.minusDays(7).minusHours(1),
         userId = user2,
         groupId = group2
       )
       _ <- postService.addPostToGroup(
         content = "yeah, the group is pretty much dead",
-        createdAt = now.minusDays(6).plusMinutes(15),
+        createdAt = dateInPast.minusDays(6).plusMinutes(15),
         userId = user3,
         groupId = group2
       )
       _ <- postService.addPostToGroup(
         content = "maybe someone will see my awesome content",
-        createdAt = now.minusDays(7).minusMinutes(15),
+        createdAt = dateInPast.minusDays(7).minusMinutes(15),
         userId = user3,
         groupId = group3
       )
       _ <- postService.addPostToGroup(
         content = "though they better come fast",
-        createdAt = now.minusDays(6).minusMinutes(15),
+        createdAt = dateInPast.minusDays(6).minusMinutes(15),
         userId = user3,
         groupId = group3
       )
@@ -123,6 +123,73 @@ class FeedServiceSpec extends MongoSpec {
         (1548461700, "first post", group1),
         (1548457200, "there is no content here", group2)
       )
+    )
+  }
+
+  // TODO: fix this weird behavior
+  it should "should correctly take latest posts" in {
+    val sut = getSut()
+    val membershipService = getMembershipService()
+    val postService = getPostService()
+
+    val setupMemberships = for {
+      _ <- membershipService.addUserToGroup(user1, group1)
+      _ <- membershipService.addUserToGroup(user1, group2)
+    } yield ()
+
+    awaitResults(setupMemberships)
+    val utcZoneId = ZoneId.of("UTC")
+
+    val dateInpast = ZonedDateTime.of(2019, 2, 2, 0, 0, 0, 0, utcZoneId)
+    implicit val clock = java.time.Clock.fixed(dateInpast.toInstant, utcZoneId)
+
+    val insertPosts = for {
+      _ <- postService.addPostToGroup(
+        content = "first post",
+        createdAt = dateInpast.minusDays(3).plusMinutes(15),
+        userId = user1,
+        groupId = group1
+      )
+      _ <- postService.addPostToGroup(
+        content = "second post",
+        createdAt = dateInpast.minusDays(2).plusHours(1),
+        userId = user1,
+        groupId = group1
+      )
+      _ <- postService.addPostToGroup(
+        content = "second group is better",
+        createdAt = dateInpast.minusDays(1),
+        userId = user1,
+        groupId = group2
+      )
+      _ <- postService.addPostToGroup(
+        content = "second group is much better",
+        createdAt = dateInpast.minusHours(1),
+        userId = user1,
+        groupId = group2
+      )
+    } yield ()
+
+    awaitResults(insertPosts)
+
+    assert(
+      awaitResults(sut.getTopPostsFromAllGroupsFeedForUser(user1, postCount = 10))
+        .map(p => (p._id.getTimestamp, p.content, p.groupId)) ==
+        List(
+          (1549062000, "second group is much better", group2),
+          (1548979200, "second group is better", group2),
+          (1548896400, "second post", group1),
+          (1548807300, "first post", group1)
+        )
+    )
+
+    assert(
+      awaitResults(sut.getTopPostsFromAllGroupsFeedForUser(user1, postCount = 2))
+        .map(p => (p._id.getTimestamp, p.content, p.groupId)) ==
+        List(
+          (1548896400, "second post", group1),
+          (1548807300, "first post", group1)
+        )
     )
   }
 
