@@ -1,0 +1,2 @@
+package mongo
+class MongoPersistanceClient {}
