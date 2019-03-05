@@ -1,6 +1,7 @@
 package rest
 
 import config.AppConfig
+import mongo.entities.Post
 import org.apache.logging.log4j.scala.Logging
 import persistance.PersistenceClient
 import persistance.entities._
@@ -12,7 +13,9 @@ class RequestHandler(appConfig: AppConfig, persistenceClient: PersistenceClient[
     implicit executionContext: ExecutionContext
 ) extends Logging {
   def getUserGroups(userId: Long): Future[List[UserGroup]] = {
-    persistenceClient.getUserGroups(UserId(userId)).map(_.map(UserGroup(_)).toList)
+    persistenceClient
+      .getUserGroups(UserId(userId))
+      .map(_.map(groupId => UserGroup(groupId.substring(GroupId.GROUP_ID_PREFIX.size))).toList)
   }
 
   def addUserToGroup(userId: Long, groupId: Long): Future[Unit] = {
@@ -28,18 +31,24 @@ class RequestHandler(appConfig: AppConfig, persistenceClient: PersistenceClient[
     )
   }
 
+  def getAllGroupsFeed(userId: Long): Future[List[ExistingGroupPost]] = {
+    ???
+  }
+
   def getGroupFeed(groupId: Long): Future[List[ExistingGroupPost]] = {
     persistenceClient
       .getGroupFeed(groupId)
-      .map(_.map { post =>
-        ExistingGroupPost(
-          postId = post._id.toString,
-          createdAt = post._id.getDate.toInstant,
-          content = post.content,
-          userId = post.userId,
-          userName = post.userName.getOrElse(""),
-          groupId = post.groupId
-        )
-      }.toList)
+      .map(_.map(postToExistingGroupPost).toList)
+  }
+
+  private def postToExistingGroupPost(post: Post): ExistingGroupPost = {
+    ExistingGroupPost(
+      postId = post._id.toString,
+      createdAt = post._id.getDate.toInstant,
+      content = post.content,
+      userId = post.userId.substring(UserId.USER_ID_PREFIX.size),
+      userName = post.userName.getOrElse(""),
+      groupId = post.groupId.substring(GroupId.GROUP_ID_PREFIX.size)
+    )
   }
 }

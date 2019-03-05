@@ -45,9 +45,11 @@ object Main extends App with Logging {
         get {
           pathPrefix("user" / LongNumber) { userId =>
             path("groups") {
-              val userGroups = requestHandler.getUserGroups(userId)
-              onSuccess(userGroups) { case l => complete(l) }
-            }
+              onSuccess(requestHandler.getUserGroups(userId)) { case l => complete(l) }
+            } ~
+              path("allGroupsFeed") {
+                onSuccess(requestHandler.getGroupFeed(userId)) { case l => complete(l) }
+              }
           } ~
             pathPrefix("group" / LongNumber) { groupId =>
               path("feed") {
