@@ -22,6 +22,8 @@ class MongoSpec extends UnitSpec with BeforeAndAfter with BeforeAndAfterAll {
 
   override def beforeAll() = {
     Configurator.setLevel("org.mongodb.driver", Level.WARN)
+    Configurator.setLevel("services", Level.DEBUG)
+    Configurator.setLevel("mongo", Level.DEBUG)
 
     mongoClient = MongoHelper.getMongoClient("mongodb://root:example@localhost:27017")
   }
@@ -37,6 +39,7 @@ class MongoSpec extends UnitSpec with BeforeAndAfter with BeforeAndAfterAll {
       _ <- mongoDB.drop()
       _ <- MongoHelper.createIndexesIfMissing(mongoDB)
     } yield ()
+
     awaitResults(setup)
   }
 

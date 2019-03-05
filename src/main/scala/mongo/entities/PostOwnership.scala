@@ -1,4 +1,5 @@
 package mongo.entities
+import mongo.StoredInCollection
 import mongo.entities.MongoKeyNames.{OwnerId, _}
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.bson.annotations.BsonProperty

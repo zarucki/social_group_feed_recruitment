@@ -7,9 +7,16 @@ import mongo.{MembershipService, PostsService}
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.{Completed, MongoDatabase, Observable}
 
-class MongoFeedService(mongoDatabase: MongoDatabase) extends FeedService[Observable] {
+class MongoFeedService(mongoDatabase: MongoDatabase) extends FeedService[Observable, ObjectId] {
   private val postService = new PostsService(mongoDatabase)
   private val membershipService = new MembershipService(mongoDatabase)
+
+  def postOnGroup(userId: UserId, groupId: GroupId, content: String, createdAt: ZonedDateTime)(
+      implicit clock: Clock
+  ): Observable[ObjectId] = {
+    // TODO: check permissions!!
+    postService.addPostToGroup(userId, groupId, content, createdAt)
+  }
 
   def getTopPostsFromAllUserGroups(userId: UserId, after: Instant): Observable[Post] = {
     for {
@@ -18,15 +25,11 @@ class MongoFeedService(mongoDatabase: MongoDatabase) extends FeedService[Observa
     } yield post
   }
 
-  def postOnGroup(userId: UserId, groupId: GroupId, content: String)(implicit clock: Clock): Observable[Completed] = {
-    postService.addPostToGroup(userId, groupId, content, ZonedDateTime.now(clock))
-  }
-
   // will be useful for getting first page
   def getTopPostsFromAllUserGroups(
       userId: UserId,
       untilPostCount: Int,
-      noLaterThan: Instant,
+      noOlderThan: Instant,
       timeSpanRequestedInOneRequest: JDuration
   )(
       implicit clock: Clock
@@ -45,7 +48,7 @@ class MongoFeedService(mongoDatabase: MongoDatabase) extends FeedService[Observa
     ): Observable[Seq[ObjectId]] = {
       val newAfter = nextAfter(currentAfter)
 
-      if (leftToFetch <= 0 || newAfter.isBefore(noLaterThan)) {
+      if (leftToFetch <= 0 || newAfter.isBefore(noOlderThan)) {
         alreadyFetchedPosts
       } else {
         val newIds = postService

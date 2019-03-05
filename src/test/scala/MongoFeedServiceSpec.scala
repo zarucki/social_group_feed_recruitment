@@ -2,10 +2,12 @@ import java.time.{ZoneId, Duration => JDuration}
 
 import mongo.entities.{Post, UserId}
 import mongo.{MembershipService, PostsService}
-import services.MongoFeedService
+import org.mongodb.scala.Observable
+import org.mongodb.scala.bson.ObjectId
+import services.{FeedService, MongoFeedService}
 
 class MongoFeedServiceSpec extends MongoSpec {
-  private val oldestContentDate = fixedDateInPast.minusDays(7).minusHours(1)
+  protected val oldestContentDate = fixedDateInPast.minusDays(7).minusHours(1)
 
   it should "return empty collection if the user is not in any group" in {
     multipleUsersGroupsAndPostsDataSetup()
@@ -196,7 +198,7 @@ class MongoFeedServiceSpec extends MongoSpec {
         sut.getTopPostsFromAllUserGroups(
           user1,
           untilPostCount = 4,
-          noLaterThan = fixedDateInPast.minusDays(7).toInstant,
+          noOlderThan = fixedDateInPast.minusDays(7).toInstant,
           timeSpanRequestedInOneRequest = JDuration.ofHours(1)
         )
       ).map(postToTestTuple) ==
@@ -219,7 +221,7 @@ class MongoFeedServiceSpec extends MongoSpec {
         sut.getTopPostsFromAllUserGroups(
           user1,
           untilPostCount = 4,
-          noLaterThan = fixedDateInPast.minusDays(7).toInstant,
+          noOlderThan = fixedDateInPast.minusDays(7).toInstant,
           timeSpanRequestedInOneRequest = JDuration.ofDays(1)
         )
       ).map(postToTestTuple) ==
@@ -242,7 +244,7 @@ class MongoFeedServiceSpec extends MongoSpec {
         sut.getTopPostsFromAllUserGroups(
           user1,
           untilPostCount = 10,
-          noLaterThan = fixedDateInPast.minusDays(7).toInstant,
+          noOlderThan = fixedDateInPast.minusDays(7).toInstant,
           timeSpanRequestedInOneRequest = JDuration.ofDays(1)
         )
       ).map(postToTestTuple) ==
@@ -265,7 +267,7 @@ class MongoFeedServiceSpec extends MongoSpec {
         sut.getTopPostsFromAllUserGroups(
           user1,
           untilPostCount = 3,
-          noLaterThan = fixedDateInPast.minusDays(7).toInstant,
+          noOlderThan = fixedDateInPast.minusDays(7).toInstant,
           timeSpanRequestedInOneRequest = JDuration.ofDays(1)
         )
       ).map(postToTestTuple) ==
@@ -287,7 +289,7 @@ class MongoFeedServiceSpec extends MongoSpec {
         sut.getTopPostsFromAllUserGroups(
           UserId("10"),
           untilPostCount = 1,
-          noLaterThan = fixedDateInPast.minusDays(14).toInstant,
+          noOlderThan = fixedDateInPast.minusDays(14).toInstant,
           timeSpanRequestedInOneRequest = JDuration.ofDays(1)
         )
       ).map(postToTestTuple) == List()
@@ -296,13 +298,13 @@ class MongoFeedServiceSpec extends MongoSpec {
 
   def multipleUsersGroupsAndPostsDataSetup(): Unit = {
     val membershipService = getMembershipService()
-    val postService = getPostService()
 
     val setupMemberships = for {
       _ <- membershipService.addUserToGroup(user1, group1)
       _ <- membershipService.addUserToGroup(user1, group2)
+      _ <- membershipService.addUserToGroup(user2, group1)
       _ <- membershipService.addUserToGroup(user2, group2)
-      _ <- membershipService.addUserToGroup(user2, group3)
+      _ <- membershipService.addUserToGroup(user3, group2)
       _ <- membershipService.addUserToGroup(user3, group3)
       _ <- membershipService.addUserToGroup(user4, emptyGroup)
     } yield ()
@@ -312,43 +314,43 @@ class MongoFeedServiceSpec extends MongoSpec {
     implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
 
     val insertPosts = for {
-      _ <- postService.addPostToGroup(
+      _ <- sut.postOnGroup(
         content = "first post",
         createdAt = fixedDateInPast.minusDays(7).plusMinutes(15),
         userId = user1,
         groupId = group1
       )
-      _ <- postService.addPostToGroup(
+      _ <- sut.postOnGroup(
         content = "nice 2 meet u",
         createdAt = fixedDateInPast.minusDays(6).plusHours(1),
         userId = user2,
         groupId = group1
       )
-      _ <- postService.addPostToGroup(
+      _ <- sut.postOnGroup(
         content = "yeah u 2",
         createdAt = fixedDateInPast.minusDays(5),
         userId = user1,
         groupId = group1
       )
-      _ <- postService.addPostToGroup(
+      _ <- sut.postOnGroup(
         content = "there is no content here",
         createdAt = oldestContentDate,
         userId = user2,
         groupId = group2
       )
-      _ <- postService.addPostToGroup(
+      _ <- sut.postOnGroup(
         content = "yeah, the group is pretty much dead",
         createdAt = fixedDateInPast.minusDays(6).plusMinutes(15),
         userId = user3,
         groupId = group2
       )
-      _ <- postService.addPostToGroup(
+      _ <- sut.postOnGroup(
         content = "maybe someone will see my awesome content",
         createdAt = fixedDateInPast.minusDays(7).minusMinutes(15),
         userId = user3,
         groupId = group3
       )
-      _ <- postService.addPostToGroup(
+      _ <- sut.postOnGroup(
         content = "though they better come fast",
         createdAt = fixedDateInPast.minusDays(6).minusMinutes(15),
         userId = user3,
@@ -361,7 +363,6 @@ class MongoFeedServiceSpec extends MongoSpec {
 
   def oneUserTwoGroupsDataSetup() = {
     val membershipService = getMembershipService()
-    val postService = getPostService()
 
     val setupMemberships = for {
       _ <- membershipService.addUserToGroup(user1, group1)
@@ -374,25 +375,25 @@ class MongoFeedServiceSpec extends MongoSpec {
     implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
 
     val insertPosts = for {
-      _ <- postService.addPostToGroup(
+      _ <- sut.postOnGroup(
         content = "first post",
         createdAt = fixedDateInPast.minusDays(3).plusMinutes(15),
         userId = user1,
         groupId = group1
       )
-      _ <- postService.addPostToGroup(
+      _ <- sut.postOnGroup(
         content = "second post",
         createdAt = fixedDateInPast.minusDays(2).plusHours(1),
         userId = user1,
         groupId = group1
       )
-      _ <- postService.addPostToGroup(
+      _ <- sut.postOnGroup(
         content = "second group is better",
         createdAt = fixedDateInPast.minusDays(1),
         userId = user1,
         groupId = group2
       )
-      _ <- postService.addPostToGroup(
+      _ <- sut.postOnGroup(
         content = "second group is much better",
         createdAt = fixedDateInPast.minusHours(1),
         userId = user1,
@@ -403,11 +404,10 @@ class MongoFeedServiceSpec extends MongoSpec {
     awaitResults(insertPosts)
   }
 
-  private def postToTestTuple(post: Post): (Int, String, String) = {
+  protected def postToTestTuple(post: Post): (Int, String, String) = {
     (post._id.getTimestamp, post.content, post.groupId)
   }
 
   def getMembershipService() = new MembershipService(mongoDB)
-  def getPostService() = new PostsService(mongoDB)
-  def sut = new MongoFeedService(mongoDB)
+  def sut: FeedService[Observable, ObjectId] = new MongoFeedService(mongoDB)
 }

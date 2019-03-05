@@ -14,7 +14,7 @@ object MongoHelper {
     UserGroup.collection -> UserGroup.indexes,
     GroupUserMember.collection -> GroupUserMember.indexes,
     PostOwnership.collection -> PostOwnership.indexes,
-    TimelineCache.collection -> Seq(TimelineCache.ttlIndex(ttlIndexConfig))
+    TimelineCache.collection -> TimelineCache.indexes(ttlIndexConfig)
   )
 
   def getMongoClient(connectionString: String): MongoClient = {

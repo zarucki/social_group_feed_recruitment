@@ -6,6 +6,7 @@ import java.util.Date
 import entities.MongoKeyNames._
 import entities._
 import mongo.SimpleMongoEntityRepository.{PostOwnershipsRepo, PostRepo}
+import org.apache.logging.log4j.scala.Logging
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.bson.collection.immutable.Document
 import org.mongodb.scala.model.Filters._
@@ -13,7 +14,7 @@ import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.Sorts._
 import org.mongodb.scala.{Completed, MongoDatabase, Observable}
 
-class PostsService(mongoDatabase: MongoDatabase) {
+class PostsService(mongoDatabase: MongoDatabase) extends Logging {
   // TODO: make it that post themselves could be even in a different db
   private val postsRepo = new PostRepo(mongoDatabase)
   private val postOwnershipsRepo = new PostOwnershipsRepo(mongoDatabase)
@@ -25,7 +26,7 @@ class PostsService(mongoDatabase: MongoDatabase) {
       groupId: GroupId,
       content: String,
       createdAt: ZonedDateTime
-  )(implicit clock: Clock): Observable[Completed] = {
+  )(implicit clock: Clock): Observable[ObjectId] = {
     val postId = new ObjectId(Date.from(createdAt.toInstant))
 
     val postToInsert = Post(
@@ -36,12 +37,10 @@ class PostsService(mongoDatabase: MongoDatabase) {
       groupId = groupId.id
     )
 
-    addPostToGroup(postToInsert)
+    addPostToGroup(postToInsert).map(_ => postId)
   }
 
-  // TODO: this does not check permissions for writing to this group
   protected def addPostToGroup(post: Post): Observable[Completed] = {
-    // On purpose everything is not stared at once, don't want to have ownership to non existing stuff inserted
     for {
       _          <- postsRepo.put(post)
       _          <- postOwnershipsRepo.put(PostOwnership(post.groupId, post._id))
@@ -100,6 +99,7 @@ class PostsService(mongoDatabase: MongoDatabase) {
   }
 
   def fetchPostsByIds(postIds: Seq[ObjectId]): Observable[Post] = {
+    // TODO: watch out for to huge seqs here?
     throwExceptionIfSequenceHasDuplicates(postIds)
 
     if (postIds.isEmpty) {
@@ -114,7 +114,7 @@ class PostsService(mongoDatabase: MongoDatabase) {
 
   def throwExceptionIfSequenceHasDuplicates[T](seq: Seq[T]) = {
     if (seq.toSet.size != seq.size) {
-      println("There are duplicates in: " + seq)
+      logger.error("There are duplicates in: " + seq)
       throw new Exception("Probably something weird happening, cause I got duplicates in: " + seq)
     }
   }

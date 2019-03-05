@@ -1,6 +1,7 @@
 package mongo.entities
 import java.time.Instant
 
+import mongo.StoredInCollection
 import mongo.entities.MongoKeyNames.OwnerId
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.bson.annotations.BsonProperty

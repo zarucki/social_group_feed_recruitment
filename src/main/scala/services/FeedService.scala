@@ -1,19 +1,20 @@
 package services
 
-import java.time.{Clock, Instant, Duration => JDuration}
+import java.time.{Clock, Instant, ZonedDateTime, Duration => JDuration}
 
 import mongo.entities.{GroupId, Post, UserId}
-import org.mongodb.scala.Completed
 
-trait FeedService[F[_]] {
-  def postOnGroup(userId: UserId, groupId: GroupId, content: String)(implicit clock: Clock): F[Completed]
+trait FeedService[F[_], TEntityId] {
+  def postOnGroup(userId: UserId, groupId: GroupId, content: String, createdAt: ZonedDateTime)(
+      implicit clock: Clock
+  ): F[TEntityId]
 
   def getTopPostsFromAllUserGroups(userId: UserId, after: Instant): F[Post]
 
   def getTopPostsFromAllUserGroups(
       userId: UserId,
       untilPostCount: Int,
-      noLaterThan: Instant,
+      noOlderThan: Instant,
       timeSpanRequestedInOneRequest: JDuration
   )(implicit clock: Clock): F[Post]
 }

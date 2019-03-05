@@ -13,17 +13,9 @@ class MembershipService(mongoDatabase: MongoDatabase) {
   private val userGroupsRepo = new UserGroupsRepo(mongoDatabase)
 
   def addUserToGroup(userId: UserId, groupId: GroupId): Observable[Completed] = {
-    // TODO: what to do on failure here?
-    // TODO: maybe update user aggregate number about count of groups he is in
-    // TODO: maybe update group aggregate number about count of users are there in
-
-    // Here to fire off them at once
-    val userGroupsWrite = userGroupsRepo.put(UserGroup(userId.id, groupId.id))
-    val groupUserMembersWrite = groupUserMembersRepo.put(GroupUserMember(groupId.id, userId.id))
-
     for {
-      _           <- userGroupsWrite
-      writeResult <- groupUserMembersWrite
+      _           <- userGroupsRepo.put(UserGroup(userId.id, groupId.id))
+      writeResult <- groupUserMembersRepo.put(GroupUserMember(groupId.id, userId.id))
     } yield writeResult
   }
 

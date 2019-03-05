@@ -1,4 +1,4 @@
-package mongo.entities
+package mongo
 
 trait StoredInCollection[A] {
   def collectionName: String
