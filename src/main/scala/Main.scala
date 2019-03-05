@@ -3,7 +3,7 @@ import akka.event.Logging
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{Route, RouteResult}
+import akka.http.scaladsl.server.{RejectionHandler, Route, RouteResult}
 import akka.http.scaladsl.server.directives.{DebuggingDirectives, LogEntry}
 import akka.stream.ActorMaterializer
 import config.AppConfig
@@ -29,26 +29,25 @@ object Main extends App with Logging {
   val persistenceClient = new MongoPersistenceClient(appConfig)
   val resourceHandler = new RequestHandler(appConfig, persistenceClient)
 
-  // TODO: logging http requests?
-
   val route: Route =
-    get {
-      pathPrefix("user") {
-        pathPrefix(LongNumber) { userId =>
-          path("groups") {
-            logger.info(s"user $userId groups")
-            val userGroups = resourceHandler.getUserGroups(userId)
-            onSuccess(userGroups) {
-              case Nil => complete(StatusCodes.OK)
-              case l   => complete(l)
-            }
-          } ~
-            path("add-to-group" / LongNumber) { groupId =>
-              onSuccess(resourceHandler.addUserToGroup(userId, groupId)) {
-                logger.info(s"user $userId successfully added to group $groupId")
-                complete(StatusCodes.OK)
+    logDuration {
+      get {
+        pathPrefix("user") {
+          pathPrefix(LongNumber) { userId =>
+            path("groups") {
+              val userGroups = resourceHandler.getUserGroups(userId)
+              onSuccess(userGroups) {
+                case Nil => complete(StatusCodes.OK)
+                case l   => complete(l)
               }
-            }
+            } ~
+              path("add-to-group" / LongNumber) { groupId =>
+                onSuccess(resourceHandler.addUserToGroup(userId, groupId)) {
+                  logger.info(s"user $userId successfully added to group $groupId")
+                  complete(StatusCodes.OK)
+                }
+              }
+          }
         }
       }
     }
@@ -60,4 +59,18 @@ object Main extends App with Logging {
   bindingFuture
     .flatMap(_.unbind()) // trigger unbinding from the port
     .onComplete(_ => system.terminate()) // and shutdown when done
+
+  def logDuration = {
+    val rejectionHandler = RejectionHandler.default
+
+    extractRequestContext.flatMap { ctx =>
+      val start = System.currentTimeMillis()
+      // handling rejections here so that we get proper status codes
+      mapResponse { resp =>
+        val d = System.currentTimeMillis() - start
+        logger.info(s"[${resp.status.intValue()}] ${ctx.request.method.name} ${ctx.request.uri} took: ${d}ms")
+        resp
+      } & handleRejections(rejectionHandler)
+    }
+  }
 }
