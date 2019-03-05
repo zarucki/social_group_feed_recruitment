@@ -1,16 +1,14 @@
 import akka.actor.ActorSystem
-import akka.event.Logging
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{RejectionHandler, Route, RouteResult}
-import akka.http.scaladsl.server.directives.{DebuggingDirectives, LogEntry}
+import akka.http.scaladsl.server.{Directive, RejectionHandler}
 import akka.stream.ActorMaterializer
 import config.AppConfig
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
+import mongo.MongoPersistenceClient
 import org.apache.logging.log4j.scala.Logging
-import persistance.MongoPersistenceClient
 import rest.RequestHandler
 
 import scala.io.StdIn
@@ -26,23 +24,28 @@ object Main extends App with Logging {
     httpRestApiPort = 8080
   )
 
-  val persistenceClient = new MongoPersistenceClient(appConfig)
-  val resourceHandler = new RequestHandler(appConfig, persistenceClient)
+  val bindingFuture = for {
+    requestHandler <- MongoPersistenceClient(appConfig).map(new RequestHandler(appConfig, _))
+    serverBinding  <- Http().bindAndHandle(routing(requestHandler), "localhost", appConfig.httpRestApiPort)
+  } yield serverBinding
 
-  val route: Route =
+  println(s"Server online at http://localhost:${appConfig.httpRestApiPort}/\nPress RETURN to stop...")
+  StdIn.readLine() // let it run until user presses return
+  bindingFuture
+    .flatMap(_.unbind()) // trigger unbinding from the port
+    .onComplete(_ => system.terminate()) // and shutdown when done
+
+  def routing(requestHandler: RequestHandler) = {
     logDuration {
       get {
         pathPrefix("user") {
           pathPrefix(LongNumber) { userId =>
             path("groups") {
-              val userGroups = resourceHandler.getUserGroups(userId)
-              onSuccess(userGroups) {
-                case Nil => complete(StatusCodes.OK)
-                case l   => complete(l)
-              }
+              val userGroups = requestHandler.getUserGroups(userId)
+              onSuccess(userGroups) { case l => complete(l) }
             } ~
               path("add-to-group" / LongNumber) { groupId =>
-                onSuccess(resourceHandler.addUserToGroup(userId, groupId)) {
+                onSuccess(requestHandler.addUserToGroup(userId, groupId)) {
                   logger.info(s"user $userId successfully added to group $groupId")
                   complete(StatusCodes.OK)
                 }
@@ -51,16 +54,9 @@ object Main extends App with Logging {
         }
       }
     }
+  }
 
-  val bindingFuture = Http().bindAndHandle(route, "localhost", appConfig.httpRestApiPort)
-
-  println(s"Server online at http://localhost:${appConfig.httpRestApiPort}/\nPress RETURN to stop...")
-  StdIn.readLine() // let it run until user presses return
-  bindingFuture
-    .flatMap(_.unbind()) // trigger unbinding from the port
-    .onComplete(_ => system.terminate()) // and shutdown when done
-
-  def logDuration = {
+  def logDuration: Directive[Unit] = {
     val rejectionHandler = RejectionHandler.default
 
     extractRequestContext.flatMap { ctx =>
