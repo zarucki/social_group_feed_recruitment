@@ -1,6 +1,7 @@
 package mongo.entities
 import mongo.StoredInCollection
 import mongo.entities.MongoKeyNames.{OwnerId, _}
+import mongo.indexes.IndexThatShouldBePresent
 import org.mongodb.scala.bson.annotations.BsonProperty
 import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.model.Indexes._

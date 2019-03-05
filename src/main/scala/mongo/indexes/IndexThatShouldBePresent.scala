@@ -1,4 +1,4 @@
-package mongo.entities
+package mongo.indexes
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.IndexOptions
 

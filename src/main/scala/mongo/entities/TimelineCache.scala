@@ -1,15 +1,13 @@
 package mongo.entities
 import java.time.Instant
-import java.util.concurrent.{TimeUnit => JTimeUnit}
 
 import mongo.StoredInCollection
 import mongo.entities.MongoKeyNames.{OwnerId, _}
+import mongo.indexes.{IndexThatShouldBePresent, TTLIndexSettings}
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.bson.annotations.BsonProperty
 import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.model.Indexes._
-
-case class TTLIndexSettings(expireAfter: Long, timeUnit: JTimeUnit)
 
 object TimelineCache {
   val collection = "timeline_cache"
@@ -17,8 +15,6 @@ object TimelineCache {
   implicit val timelineCacheStoredInCollection = new StoredInCollection[TimelineCache] {
     override def collectionName: String = TimelineCache.collection
   }
-
-  // TODO: index on cachedPosts?
 
   def indexes(ttlIndexSettings: TTLIndexSettings): Seq[IndexThatShouldBePresent] = {
     Seq(
@@ -41,7 +37,6 @@ object TimelineCache {
   }
 }
 
-// TODO: cachedPosts should be ordered?
 case class TimelineCache(
     @BsonProperty("oid") ownerId: OwnerId,
     @BsonProperty("tp") topPostIds: List[ObjectId],
