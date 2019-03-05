@@ -2,7 +2,8 @@ package services
 
 import java.time.{Instant, ZonedDateTime, Duration => JDuration}
 
-import mongo.entities.{GroupId, Post, UserId}
+import mongo.entities.Post
+import persistance.entities.{GroupId, UserId}
 
 trait FeedService[F[_], TEntityId] {
   def postOnGroup(userId: UserId, groupId: GroupId, content: String, createdAt: ZonedDateTime): F[TEntityId]

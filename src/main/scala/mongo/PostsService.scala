@@ -13,6 +13,7 @@ import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.Sorts._
 import org.mongodb.scala.{Completed, MongoDatabase, Observable}
+import persistance.entities.{GroupId, PersistenceContentOwnerId, UserId}
 
 class PostsService(mongoDatabase: MongoDatabase) extends Logging {
   // TODO: make it that post themselves could be even in a different db
@@ -80,7 +81,7 @@ class PostsService(mongoDatabase: MongoDatabase) extends Logging {
     }
   }
 
-  def getLatestPostsForOwners(ownerId: MongoContentOwnerId, after: Instant): Observable[Post] = {
+  def getLatestPostsForOwners(ownerId: PersistenceContentOwnerId, after: Instant): Observable[Post] = {
     getLatestPostsForOwners(Seq(ownerId.id), after)
   }
 

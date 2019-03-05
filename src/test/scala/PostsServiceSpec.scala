@@ -1,5 +1,5 @@
 import mongo.PostsService
-import mongo.entities.UserId
+import persistance.entities.UserId
 
 class PostsServiceSpec extends MongoSpec {
   it should "should return correct posts in correct order" in {

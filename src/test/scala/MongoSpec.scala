@@ -2,11 +2,11 @@ import java.time.{ZoneId, ZonedDateTime}
 import java.util.concurrent.TimeUnit
 
 import mongo.MongoHelper
-import mongo.entities.{GroupId, UserId}
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.core.config.Configurator
 import org.mongodb.scala.{MongoClient, MongoDatabase, Observable}
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import persistance.entities.{GroupId, UserId}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration

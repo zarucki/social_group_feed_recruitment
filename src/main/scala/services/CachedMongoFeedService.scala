@@ -3,11 +3,12 @@ import java.time.{Clock, Duration, Instant, ZonedDateTime}
 import java.util.Date
 import java.util.concurrent.atomic.AtomicInteger
 
-import mongo.entities.{GroupId, Post, UserId}
+import mongo.entities.Post
 import mongo.{MembershipService, PostsService}
 import org.apache.logging.log4j.scala.Logging
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.{MongoDatabase, Observable}
+import persistance.entities.{GroupId, UserId}
 
 // TODO: fetching group timeline?
 class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: FeedService[Observable, ObjectId])(

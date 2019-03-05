@@ -2,10 +2,11 @@ package services
 import java.time.{Clock, Instant, ZonedDateTime, Duration => JDuration}
 import java.util.Date
 
-import mongo.entities.{GroupId, Post, UserId}
+import mongo.entities.Post
 import mongo.{MembershipService, PostsService}
 import org.mongodb.scala.bson.ObjectId
-import org.mongodb.scala.{Completed, MongoDatabase, Observable}
+import org.mongodb.scala.{MongoDatabase, Observable}
+import persistance.entities.{GroupId, UserId}
 
 class MongoFeedService(mongoDatabase: MongoDatabase)(implicit clock: Clock) extends FeedService[Observable, ObjectId] {
   private val postService = new PostsService(mongoDatabase)

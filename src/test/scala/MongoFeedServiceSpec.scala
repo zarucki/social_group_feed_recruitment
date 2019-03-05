@@ -1,9 +1,10 @@
 import java.time.{ZoneId, Duration => JDuration}
 
-import mongo.entities.{Post, UserId}
+import mongo.entities.Post
 import mongo.{MembershipService, PostsService}
 import org.mongodb.scala.Observable
 import org.mongodb.scala.bson.ObjectId
+import persistance.entities.UserId
 import services.{FeedService, MongoFeedService}
 
 class MongoFeedServiceSpec extends MongoSpec {
