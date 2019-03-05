@@ -14,8 +14,6 @@ trait FeedService[F[_], TEntityId] {
       userName: Option[String] = None
   ): F[Either[Throwable, TEntityId]]
 
-  def getTopPostsFromAllUserGroups(userId: UserId, after: Instant): F[Post]
-
   def getTopPostsFromAllUserGroups(
       userId: UserId,
       untilPostCount: Int,
@@ -24,4 +22,8 @@ trait FeedService[F[_], TEntityId] {
   ): F[Post]
 
   def getTopPostsForGroup(groupId: GroupId): F[Post]
+  def getTopPostsFromAllUserGroups(userId: UserId): F[Post]
+
+  def getTopPostsFromAllUserGroups(userId: UserId, after: Instant): F[Post]
+
 }

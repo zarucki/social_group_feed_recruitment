@@ -19,12 +19,14 @@ echo $'\n\n'
 ./makePostToGroupByUser.sh 1 1 "my first message" "user name 1"
 echo $'\n\n'
 
-sleep 5
+echo "Sleeping for 3 seconds."
+sleep 3
 
 ./makePostToGroupByUser.sh 2 1 "my second message" "user name 1"
 echo $'\n\n'
 
-sleep 5
+echo "Sleeping for 3 seconds."
+sleep 3
 
 ./makePostToGroupByUser.sh 2 2 "my 1st msg" "user name 2"
 echo $'\n\n'
@@ -36,4 +38,16 @@ echo $'\n\n'
 echo $'\n\n'
 
 ./getGroupFeed.sh 2
+echo $'\n\n'
+
+./getGroupFeedForUser.sh 1
+echo $'\n\n'
+
+./getGroupFeedForUser.sh 2
+echo $'\n\n'
+
+./getGroupFeedForUser.sh 1
+echo $'\n\n'
+
+./getGroupFeedForUser.sh 2
 echo $'\n\n'

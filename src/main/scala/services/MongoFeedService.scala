@@ -43,14 +43,13 @@ class MongoFeedService(mongoDatabase: MongoDatabase)(implicit clock: Clock)
       post     <- postService.getLatestPostsForOwners(groupIds, after)
     } yield post
   }
-  // will be useful for getting first page
+
   override def getTopPostsFromAllUserGroups(
       userId: UserId,
       untilPostCount: Int,
       noOlderThan: Instant,
       timeSpanRequestedInOneRequest: JDuration
   ): Observable[Post] = {
-    val now = ZonedDateTime.now(clock)
 
     def nextAfter(currentAfter: Instant) = currentAfter.minusNanos(timeSpanRequestedInOneRequest.toNanos)
 
@@ -100,7 +99,19 @@ class MongoFeedService(mongoDatabase: MongoDatabase)(implicit clock: Clock)
   override def getTopPostsForGroup(groupId: GroupId): Observable[Post] = {
     postService.getLatestPostsForOwner(
       groupId,
-      ZonedDateTime.now(clock).minusDays(7).toInstant
+      defaultAfterForFeed
     )
   }
+
+  override def getTopPostsFromAllUserGroups(userId: UserId): Observable[Post] = {
+    getTopPostsFromAllUserGroups(
+      userId = userId,
+      untilPostCount = 20,
+      noOlderThan = now.minusDays(14).toInstant,
+      timeSpanRequestedInOneRequest = JDuration.ofDays(7)
+    )
+  }
+
+  private def now: ZonedDateTime = ZonedDateTime.now(clock)
+  private def defaultAfterForFeed: Instant = now.minusDays(defaultFeedDaysBack).toInstant
 }

@@ -1,7 +1,7 @@
-import java.time.{ZoneId, Duration => JDuration}
+import java.time.{Duration => JDuration}
 
+import mongo.MembershipService
 import mongo.entities.Post
-import mongo.{MembershipService, PostsService}
 import org.mongodb.scala.Observable
 import org.mongodb.scala.bson.ObjectId
 import persistance.entities.UserId
@@ -194,8 +194,6 @@ class MongoFeedServiceSpec extends MongoSpec {
   it should "correctly fetch requested number of posts with hour sliding" in {
     oneUserTwoGroupsDataSetup()
 
-    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
-
     assert(
       awaitResults(
         sut.getTopPostsFromAllUserGroups(
@@ -238,8 +236,6 @@ class MongoFeedServiceSpec extends MongoSpec {
   it should "return all post if found even though it couldn't fulfill whole count" in {
     oneUserTwoGroupsDataSetup()
 
-    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
-
     assert(
       awaitResults(
         sut.getTopPostsFromAllUserGroups(
@@ -261,8 +257,6 @@ class MongoFeedServiceSpec extends MongoSpec {
   it should "return only requested count even if there are more" in {
     oneUserTwoGroupsDataSetup()
 
-    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
-
     assert(
       awaitResults(
         sut.getTopPostsFromAllUserGroups(
@@ -282,8 +276,6 @@ class MongoFeedServiceSpec extends MongoSpec {
 
   it should "return empty if it cannot fulfill requested count but search whole space" in {
     oneUserTwoGroupsDataSetup()
-
-    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
 
     assert(
       awaitResults(
@@ -311,8 +303,6 @@ class MongoFeedServiceSpec extends MongoSpec {
     } yield ()
 
     awaitResults(setupMemberships)
-
-    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
 
     val insertPosts = for {
       _ <- sut.postOnGroup(
@@ -371,8 +361,6 @@ class MongoFeedServiceSpec extends MongoSpec {
     } yield ()
 
     awaitResults(setupMemberships)
-
-    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
 
     val insertPosts = for {
       _ <- sut.postOnGroup(

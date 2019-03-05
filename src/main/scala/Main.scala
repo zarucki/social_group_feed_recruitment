@@ -47,8 +47,8 @@ object Main extends App with Logging {
             path("groups") {
               onSuccess(requestHandler.getUserGroups(userId)) { case l => complete(l) }
             } ~
-              path("allGroupsFeed") {
-                onSuccess(requestHandler.getGroupFeed(userId)) { case l => complete(l) }
+              path("all-groups-feed") {
+                onSuccess(requestHandler.getAllGroupsFeedForUser(userId)) { case l => complete(l) }
               }
           } ~
             pathPrefix("group" / LongNumber) { groupId =>

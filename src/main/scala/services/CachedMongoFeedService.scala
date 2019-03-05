@@ -1,7 +1,6 @@
 package services
-import java.time.{Clock, Duration, Instant, ZonedDateTime}
+import java.time.{Clock, Instant, ZonedDateTime, Duration => JDuration}
 import java.util.Date
-import java.util.concurrent.atomic.AtomicInteger
 
 import mongo.entities.Post
 import mongo.{MembershipService, PostsService}
@@ -74,7 +73,7 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
       userId: UserId,
       untilPostCount: Int,
       noOlderThan: Instant,
-      timeSpanRequestedInOneRequest: Duration
+      timeSpanRequestedInOneRequest: JDuration
   ): Observable[Post] = {
     // TODO: check if other params also nonstandard, if so don't use cache
     if (untilPostCount > maxCachedPostCountInTimeline) {
@@ -83,12 +82,12 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
     } else {
       timelineCacheService.getCachedTimelineForOwner(userId.id).collect().flatMap { postsFromCache =>
         if (postsFromCache.nonEmpty) {
-          logger.debug(
+          logger.info(
             s"Got cache hit for timeline for $userId and $untilPostCount post count, in cache ${postsFromCache.size}"
           )
           postService.fetchPostsByIds(postsFromCache.take(untilPostCount))
         } else {
-          logger.debug(
+          logger.info(
             s"Got cache miss for timeline for $userId and $untilPostCount post count."
           )
 
@@ -125,4 +124,15 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
   override def getTopPostsForGroup(groupId: GroupId): Observable[Post] = {
     underlyingService.getTopPostsForGroup(groupId)
   }
+
+  override def getTopPostsFromAllUserGroups(userId: UserId): Observable[Post] = {
+    getTopPostsFromAllUserGroups(
+      userId = userId,
+      untilPostCount = 20,
+      noOlderThan = now.minusDays(14).toInstant,
+      timeSpanRequestedInOneRequest = JDuration.ofDays(7)
+    )
+  }
+
+  private def now: ZonedDateTime = ZonedDateTime.now(clock)
 }

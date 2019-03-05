@@ -6,8 +6,11 @@ import scala.concurrent.Future
 
 trait PersistenceClient[F[_]] {
   def init(): F[PersistenceClient[F]]
+
   def getUserGroups(userId: UserId): F[Seq[String]]
+
   def addUserToGroup(userId: UserId, groupId: GroupId): F[Unit]
+
   def addPostToGroup(
       userId: UserId,
       groupId: GroupId,
@@ -15,5 +18,7 @@ trait PersistenceClient[F[_]] {
       userName: String
   ): Future[Either[Throwable, String]]
 
-  def getGroupFeed(groupId: Long): Future[Seq[Post]]
+  def getGroupFeed(groupId: Long): F[Seq[Post]]
+
+  def getAllGroupsFeedForUser(userId: Long): F[Seq[Post]]
 }

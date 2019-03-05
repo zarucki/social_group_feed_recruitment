@@ -31,8 +31,10 @@ class RequestHandler(appConfig: AppConfig, persistenceClient: PersistenceClient[
     )
   }
 
-  def getAllGroupsFeed(userId: Long): Future[List[ExistingGroupPost]] = {
-    ???
+  def getAllGroupsFeedForUser(userId: Long): Future[List[ExistingGroupPost]] = {
+    persistenceClient
+      .getAllGroupsFeedForUser(userId)
+      .map(_.map(postToExistingGroupPost).toList)
   }
 
   def getGroupFeed(groupId: Long): Future[List[ExistingGroupPost]] = {

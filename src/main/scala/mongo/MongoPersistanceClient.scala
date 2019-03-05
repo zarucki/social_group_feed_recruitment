@@ -89,4 +89,8 @@ class MongoPersistenceClient private (appConfig: AppConfig)(implicit executionCo
   override def getGroupFeed(groupId: Long): Future[Seq[Post]] = {
     feedService.getTopPostsForGroup(GroupId(groupId)).collect().toFuture()
   }
+
+  override def getAllGroupsFeedForUser(userId: Long): Future[Seq[Post]] = {
+    feedService.getTopPostsFromAllUserGroups(UserId(userId)).collect().toFuture()
+  }
 }
