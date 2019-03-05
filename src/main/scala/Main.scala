@@ -43,19 +43,17 @@ object Main extends App with Logging {
     handleExceptions(exceptionHandler) {
       logDuration {
         get {
-          pathPrefix("user") {
-            pathPrefix(LongNumber) { userId =>
-              path("groups") {
-                val userGroups = requestHandler.getUserGroups(userId)
-                onSuccess(userGroups) { case l => complete(l) }
-              } ~
-                path("add-to-group" / LongNumber) { groupId =>
-                  onSuccess(requestHandler.addUserToGroup(userId, groupId)) {
-                    logger.info(s"user $userId successfully added to group $groupId")
-                    complete(StatusCodes.OK)
-                  }
+          pathPrefix("user" / LongNumber) { userId =>
+            path("groups") {
+              val userGroups = requestHandler.getUserGroups(userId)
+              onSuccess(userGroups) { case l => complete(l) }
+            } ~
+              path("add-to-group" / LongNumber) { groupId =>
+                onSuccess(requestHandler.addUserToGroup(userId, groupId)) {
+                  logger.info(s"user $userId successfully added to group $groupId")
+                  complete(StatusCodes.OK)
                 }
-            }
+              }
           }
         } ~
           post {
