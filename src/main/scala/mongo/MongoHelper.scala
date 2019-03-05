@@ -4,7 +4,7 @@ import java.util.concurrent.{TimeUnit => JTimeUnit}
 
 import com.mongodb.ConnectionString
 import mongo.entities._
-import mongo.indexes.IndexThatShouldBePresent
+import mongo.indexes.{IndexThatShouldBePresent, TTLIndexSettings}
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
 import org.mongodb.scala.bson.codecs.DEFAULT_CODEC_REGISTRY
 import org.mongodb.scala.bson.codecs.Macros._

@@ -4,6 +4,8 @@ import org.mongodb.scala.Observable
 import org.mongodb.scala.bson.ObjectId
 import services.{CachedMongoFeedService, FeedService, MongoFeedService, TimelineCacheService}
 
+// TODO: test that TTL works?
+// TODO: test slicing of timelineCache
 class CachedMongoFeedServiceSpec extends MongoFeedServiceSpec {
   override def sut: FeedService[Observable, ObjectId] =
     new CachedMongoFeedService(mongoDatabase = mongoDB, new MongoFeedService(mongoDB))

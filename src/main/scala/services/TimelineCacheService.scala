@@ -2,7 +2,7 @@ package services
 import java.time.{Clock, ZonedDateTime}
 
 import com.mongodb.client.model.{PushOptions, UpdateOptions}
-import mongo.SimpleMongoEntityRepository.TimelineCacheRepo
+import mongo.repository.SimpleMongoEntityRepository.TimelineCacheRepo
 import mongo.entities.MongoKeyNames._
 import mongo.entities.TimelineCache
 import org.apache.logging.log4j.scala.Logging

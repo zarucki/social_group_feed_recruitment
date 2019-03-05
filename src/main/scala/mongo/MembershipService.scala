@@ -2,7 +2,7 @@ package mongo
 
 import entities.MongoKeyNames._
 import entities.{GroupId, GroupUserMember, UserGroup, UserId}
-import mongo.SimpleMongoEntityRepository.{GroupUserMembersRepo, UserGroupsRepo}
+import mongo.repository.SimpleMongoEntityRepository.{GroupUserMembersRepo, UserGroupsRepo}
 import org.mongodb.scala.bson.collection.immutable.Document
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Projections._

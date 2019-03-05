@@ -5,7 +5,7 @@ import java.util.Date
 
 import entities.MongoKeyNames._
 import entities._
-import mongo.SimpleMongoEntityRepository.{PostOwnershipsRepo, PostRepo}
+import mongo.repository.SimpleMongoEntityRepository.{PostOwnershipsRepo, PostRepo}
 import org.apache.logging.log4j.scala.Logging
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.bson.collection.immutable.Document
@@ -20,7 +20,6 @@ class PostsService(mongoDatabase: MongoDatabase) extends Logging {
   private val postOwnershipsRepo = new PostOwnershipsRepo(mongoDatabase)
 
   // TODO: this does not check permissions for writing to this group
-
   def addPostToGroup(
       userId: UserId,
       groupId: GroupId,
