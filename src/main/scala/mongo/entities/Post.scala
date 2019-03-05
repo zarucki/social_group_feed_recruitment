@@ -19,5 +19,6 @@ case class Post(
     @BsonProperty("i") insertedAt: Instant,
     @BsonProperty("p") content: String,
     @BsonProperty("uid") userId: OwnerId,
-    @BsonProperty("gid") groupId: OwnerId // this could be None for user wall posts
+    @BsonProperty("gid") groupId: OwnerId, // this could be None for user wall posts
+    @BsonProperty("un") userName: Option[String]
 )

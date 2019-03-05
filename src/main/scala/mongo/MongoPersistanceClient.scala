@@ -1,26 +1,33 @@
 package mongo
+import java.time.{Clock, ZonedDateTime}
+
 import config.AppConfig
 import org.apache.logging.log4j.scala.Logging
-import org.mongodb.scala.{MongoClient, MongoDatabase, MongoWriteException}
+import org.mongodb.scala.MongoWriteException
+import persistance.entities.{GroupId, UserId}
 import persistance.{DuplicateWriteException, PersistenceClient}
-import persistance.entities.{GroupId, UserGroup, UserId}
+import rest.entities.UserGroup
+import services.{CachedMongoFeedService, MongoFeedService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object MongoPersistenceClient {
-  def apply(appConfig: AppConfig)(implicit executionContext: ExecutionContext): Future[MongoPersistenceClient] = {
+  def apply(
+      appConfig: AppConfig
+  )(implicit executionContext: ExecutionContext, clock: Clock): Future[MongoPersistenceClient] = {
     val client = new MongoPersistenceClient(appConfig)
     client.init()
   }
 }
 
-class MongoPersistenceClient private (appConfig: AppConfig)(implicit executionContext: ExecutionContext)
+class MongoPersistenceClient private (appConfig: AppConfig)(implicit executionContext: ExecutionContext, clock: Clock)
     extends PersistenceClient[Future]
     with Logging {
   private val mongoClient = MongoHelper.getMongoClient(appConfig.connectionString)
   private val mongoDB = MongoHelper.getMongoDBWhichUnderstandsEntities(mongoClient, appConfig.dbName)
 
   private val membershipService = new MembershipService(mongoDB)
+  private val cachedMongoFeedService = new CachedMongoFeedService(mongoDB, new MongoFeedService(mongoDB))
 
   override def init(): Future[MongoPersistenceClient] = {
 
@@ -58,5 +65,23 @@ class MongoPersistenceClient private (appConfig: AppConfig)(implicit executionCo
             new DuplicateWriteException(s"Can't insert duplicate. User $userId is already in group $groupId.", ex)
           )
       }
+  }
+
+  override def addPostToGroup(
+      userId: UserId,
+      groupId: GroupId,
+      content: String,
+      userName: String
+  ): Future[Either[Throwable, String]] = {
+    cachedMongoFeedService
+      .postOnGroup(
+        userId = userId,
+        groupId = groupId,
+        content = content,
+        userName = Some(userName),
+        createdAt = ZonedDateTime.now(clock)
+      )
+      .head()
+      .map { _.right.map(_.toString) }
   }
 }

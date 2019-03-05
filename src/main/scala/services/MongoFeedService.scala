@@ -4,11 +4,15 @@ import java.util.Date
 
 import mongo.entities.Post
 import mongo.{MembershipService, PostsService}
+import org.apache.logging.log4j.scala.Logging
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.{MongoDatabase, Observable}
+import persistance.UserPostedToNotHisGroupException
 import persistance.entities.{GroupId, UserId}
 
-class MongoFeedService(mongoDatabase: MongoDatabase)(implicit clock: Clock) extends FeedService[Observable, ObjectId] {
+class MongoFeedService(mongoDatabase: MongoDatabase)(implicit clock: Clock)
+    extends FeedService[Observable, ObjectId]
+    with Logging {
   private val postService = new PostsService(mongoDatabase)
   private val membershipService = new MembershipService(mongoDatabase)
 
@@ -16,10 +20,20 @@ class MongoFeedService(mongoDatabase: MongoDatabase)(implicit clock: Clock) exte
       userId: UserId,
       groupId: GroupId,
       content: String,
-      createdAt: ZonedDateTime
-  ): Observable[ObjectId] = {
-    // TODO: check permissions!!
-    postService.addPostToGroup(userId, groupId, content, createdAt)
+      createdAt: ZonedDateTime,
+      userName: Option[String] = None
+  ): Observable[Either[Throwable, ObjectId]] = {
+
+    val allUserGroups = membershipService.getAllGroupsForUser(userId).collect()
+
+    allUserGroups.map(_.toSet).flatMap { groupIds =>
+      if (groupIds.contains(groupId.id)) {
+        postService.addPostToGroup(userId, groupId, content, createdAt, userName).map(Right(_))
+      } else {
+        logger.warn(s"${userId.id} tried to post on ${groupId.id} which he is not a member of.")
+        Observable(Seq(Left(new UserPostedToNotHisGroupException(userId.id, groupId.id))))
+      }
+    }
   }
 
   override def getTopPostsFromAllUserGroups(userId: UserId, after: Instant): Observable[Post] = {

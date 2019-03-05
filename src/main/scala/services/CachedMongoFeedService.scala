@@ -8,6 +8,7 @@ import mongo.{MembershipService, PostsService}
 import org.apache.logging.log4j.scala.Logging
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.{MongoDatabase, Observable}
+import persistance.UserPostedToNotHisGroupException
 import persistance.entities.{GroupId, UserId}
 
 // TODO: fetching group timeline?
@@ -15,8 +16,6 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
     implicit clock: Clock
 ) extends FeedService[Observable, ObjectId]
     with Logging {
-  private val cacheHits = new AtomicInteger(0)
-  private val cacheMisses = new AtomicInteger(0)
 
   private val maxCachedPostCountInTimeline = 50
   private val postService = new PostsService(mongoDatabase)
@@ -28,20 +27,21 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
       userId: UserId,
       groupId: GroupId,
       content: String,
-      createdAt: ZonedDateTime
-  ): Observable[ObjectId] = {
+      createdAt: ZonedDateTime,
+      userName: Option[String] = None
+  ): Observable[Either[Throwable, ObjectId]] = {
     val allGroupUsersIds = membershipService.getAllUsersForGroup(groupId).collect()
 
     allGroupUsersIds.map(_.toSet).flatMap { userIds =>
       if (userIds.contains(userId.id)) {
-        postService.addPostToGroup(userId, groupId, content, createdAt).flatMap { postId =>
+        postService.addPostToGroup(userId, groupId, content, createdAt, userName).flatMap { postId =>
           timelineCacheService.updateExistingCachedTimelinesWithNewPost(userIds.toSeq, postId).map { _ =>
-            postId
+            Right(postId)
           }
         }
       } else {
         logger.warn(s"${userId.id} tried to post on ${groupId.id} which he is not a member of.")
-        Observable(Seq.empty)
+        Observable(Seq(Left(new UserPostedToNotHisGroupException(userId.id, groupId.id))))
       }
     }
   }
@@ -83,7 +83,6 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
     } else {
       timelineCacheService.getCachedTimelineForOwner(userId.id).collect().flatMap { postsFromCache =>
         if (postsFromCache.nonEmpty) {
-          cacheHits.incrementAndGet()
           logger.debug(
             s"Got cache hit for timeline for $userId and $untilPostCount post count, in cache ${postsFromCache.size}"
           )

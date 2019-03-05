@@ -217,8 +217,6 @@ class MongoFeedServiceSpec extends MongoSpec {
   it should "correctly fetch requested number of posts with daily sliding" in {
     oneUserTwoGroupsDataSetup()
 
-    implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
-
     assert(
       awaitResults(
         sut.getTopPostsFromAllUserGroups(

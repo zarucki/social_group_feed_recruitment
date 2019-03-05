@@ -25,7 +25,8 @@ class PostsService(mongoDatabase: MongoDatabase) extends Logging {
       userId: UserId,
       groupId: GroupId,
       content: String,
-      createdAt: ZonedDateTime
+      createdAt: ZonedDateTime,
+      userName: Option[String] = None
   )(implicit clock: Clock): Observable[ObjectId] = {
     val postId = new ObjectId(Date.from(createdAt.toInstant))
 
@@ -34,7 +35,8 @@ class PostsService(mongoDatabase: MongoDatabase) extends Logging {
       insertedAt = Instant.now(clock),
       content = content,
       userId = userId.id,
-      groupId = groupId.id
+      groupId = groupId.id,
+      userName = userName
     )
 
     addPostToGroup(postToInsert).map(_ => postId)

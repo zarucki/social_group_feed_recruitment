@@ -9,8 +9,9 @@ import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
 import mongo.MongoPersistenceClient
 import org.apache.logging.log4j.scala.Logging
-import persistance.PersistenceException
+import persistance.{PersistenceException, UserPostedToNotHisGroupException}
 import rest.RequestHandler
+import rest.entities.GroupPost
 
 import scala.io.StdIn
 import scala.util.control.NonFatal
@@ -19,6 +20,7 @@ object Main extends App with Logging {
   implicit val system = ActorSystem("feed-system")
   implicit val materializer = ActorMaterializer()
   implicit val executionContext = system.dispatcher
+  implicit val clock = java.time.Clock.systemUTC()
 
   val appConfig: AppConfig = AppConfig(
     connectionString = "mongodb://root:example@localhost:27017",
@@ -55,7 +57,23 @@ object Main extends App with Logging {
                 }
             }
           }
-        }
+        } ~
+          post {
+            path("group" / LongNumber) { groupId =>
+              entity(as[GroupPost]) { groupPost =>
+                onSuccess(requestHandler.addPostToGroup(groupId, groupPost)) {
+                  case Right(postId) => complete(postId)
+                  case Left(t: UserPostedToNotHisGroupException) =>
+                    complete(
+                      StatusCodes.Forbidden -> s"User ${t.userId} has not enough permissions to post on ${t.groupId}."
+                    )
+                  case Left(t: Throwable) =>
+                    logger.error(s"Got error while adding post $groupPost to $groupId.", t)
+                    complete(StatusCodes.BadRequest)
+                }
+              }
+            }
+          }
       }
     }
   }

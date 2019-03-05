@@ -64,7 +64,14 @@ class CachedMongoFeedServiceSpec extends MongoFeedServiceSpec {
         )
     )
 
-    awaitResults(sut.postOnGroup(user1, group1, "out of nowhere", fixedDateInPast.minusDays(2).plusHours(6)))
+    awaitResults(
+      sut.postOnGroup(
+        userId = user1,
+        groupId = group1,
+        content = "out of nowhere",
+        createdAt = fixedDateInPast.minusDays(2).plusHours(6)
+      )
+    )
 
     val timelineCacheObjectAfterOneInsert =
       awaitResults(timelineCacheService.getTimelineCacheObjectForOwner(user1.id)).headOption
@@ -134,7 +141,14 @@ class CachedMongoFeedServiceSpec extends MongoFeedServiceSpec {
     assert(timelineCacheObjectInitialState.map(_.topPostIds).getOrElse(Seq.empty).nonEmpty)
 
     awaitResults(getMembershipService().addUserToGroup(user1, group3))
-    awaitResults(sut.postOnGroup(user1, group3, "fresh content on 3", fixedDateInPast.minusMinutes(10)))
+    awaitResults(
+      sut.postOnGroup(
+        userId = user1,
+        groupId = group3,
+        content = "fresh content on 3",
+        createdAt = fixedDateInPast.minusMinutes(10)
+      )
+    )
 
     assert(awaitResults(timelineCacheService.getTimelineCacheObjectForOwner(user1.id)).isEmpty)
 

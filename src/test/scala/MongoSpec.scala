@@ -33,7 +33,7 @@ class MongoSpec extends UnitSpec with BeforeAndAfter with BeforeAndAfterAll {
   }
 
   before {
-    mongoDB = MongoHelper.getMongoDBWhichUnderstandsEntities(mongoClient, "test_db")
+    mongoDB = MongoHelper.getMongoDBWhichUnderstandsEntities(mongoClient, "test-db")
 
     val setup = for {
       _ <- mongoDB.drop()
