@@ -47,30 +47,32 @@ object Main extends App with Logging {
             path("groups") {
               val userGroups = requestHandler.getUserGroups(userId)
               onSuccess(userGroups) { case l => complete(l) }
-            } ~
+            }
+          }
+        } ~
+          post {
+            pathPrefix("user" / LongNumber) { userId =>
               path("add-to-group" / LongNumber) { groupId =>
                 onSuccess(requestHandler.addUserToGroup(userId, groupId)) {
                   logger.info(s"user $userId successfully added to group $groupId")
                   complete(StatusCodes.OK)
                 }
               }
-          }
-        } ~
-          post {
-            path("group" / LongNumber) { groupId =>
-              entity(as[GroupPost]) { groupPost =>
-                onSuccess(requestHandler.addPostToGroup(groupId, groupPost)) {
-                  case Right(postId) => complete(postId)
-                  case Left(t: UserPostedToNotHisGroupException) =>
-                    complete(
-                      StatusCodes.Forbidden -> s"User ${t.userId} has not enough permissions to post on ${t.groupId}."
-                    )
-                  case Left(t: Throwable) =>
-                    logger.error(s"Got error while adding post $groupPost to $groupId.", t)
-                    complete(StatusCodes.BadRequest)
+            } ~
+              path("group" / LongNumber) { groupId =>
+                entity(as[GroupPost]) { groupPost =>
+                  onSuccess(requestHandler.addPostToGroup(groupId, groupPost)) {
+                    case Right(postId) => complete(postId)
+                    case Left(t: UserPostedToNotHisGroupException) =>
+                      complete(
+                        StatusCodes.Forbidden -> s"User ${t.userId} has not enough permissions to post on ${t.groupId}."
+                      )
+                    case Left(t: Throwable) =>
+                      logger.error(s"Got error while adding post $groupPost to $groupId.", t)
+                      complete(StatusCodes.BadRequest)
+                  }
                 }
               }
-            }
           }
       }
     }
