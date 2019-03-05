@@ -24,7 +24,7 @@ object TimelineCache {
       ),
       IndexThatShouldBePresent(
         s"index_${TimelineCacheNames.topPostsKey}_-1",
-        (descending(TimelineCacheNames.topPostsKey), IndexOptions().unique(true)) // TODO: will this unique be a problem?
+        (descending(TimelineCacheNames.topPostsKey), IndexOptions())
       ),
       IndexThatShouldBePresent(
         s"index_ttl_${TimelineCacheNames.lastUpdatedKey}_1",

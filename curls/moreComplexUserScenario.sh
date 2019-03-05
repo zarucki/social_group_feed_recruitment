@@ -43,8 +43,19 @@ echo $'\n\n'
 ./getGroupFeedForUser.sh 1
 echo $'\n\n'
 
+./getGroupFeedForUser.sh 1
+echo $'\n\n'
+
 ./getGroupFeedForUser.sh 2
 echo $'\n\n'
+
+./getGroupFeedForUser.sh 2
+echo $'\n\n'
+
+./makePostToGroupByUser.sh 2 1 "my third message" "user name 1"
+echo $'\n\n'
+
+echo "It will have new post and still hit cache even though we just updated group."
 
 ./getGroupFeedForUser.sh 1
 echo $'\n\n'
