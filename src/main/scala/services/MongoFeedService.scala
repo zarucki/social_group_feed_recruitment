@@ -13,6 +13,7 @@ import persistance.entities.{GroupId, UserId}
 class MongoFeedService(mongoDatabase: MongoDatabase)(implicit clock: Clock)
     extends FeedService[Observable, ObjectId]
     with Logging {
+  private val defaultFeedDaysBack = 7
   private val postService = new PostsService(mongoDatabase)
   private val membershipService = new MembershipService(mongoDatabase)
 
@@ -42,7 +43,6 @@ class MongoFeedService(mongoDatabase: MongoDatabase)(implicit clock: Clock)
       post     <- postService.getLatestPostsForOwners(groupIds, after)
     } yield post
   }
-
   // will be useful for getting first page
   override def getTopPostsFromAllUserGroups(
       userId: UserId,
@@ -95,5 +95,12 @@ class MongoFeedService(mongoDatabase: MongoDatabase)(implicit clock: Clock)
       )
       post <- postService.fetchPostsByIds(postIds.take(untilPostCount))
     } yield post
+  }
+
+  override def getTopPostsForGroup(groupId: GroupId): Observable[Post] = {
+    postService.getLatestPostsForOwner(
+      groupId,
+      ZonedDateTime.now(clock).minusDays(7).toInstant
+    )
   }
 }

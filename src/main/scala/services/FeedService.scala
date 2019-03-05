@@ -22,4 +22,6 @@ trait FeedService[F[_], TEntityId] {
       noOlderThan: Instant,
       timeSpanRequestedInOneRequest: JDuration
   ): F[Post]
+
+  def getTopPostsForGroup(groupId: GroupId): F[Post]
 }

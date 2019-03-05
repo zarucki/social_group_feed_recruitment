@@ -2,7 +2,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{Directive, ExceptionHandler, RejectionHandler}
+import akka.http.scaladsl.server.{Directive, ExceptionHandler, RejectionHandler, Route}
 import akka.stream.ActorMaterializer
 import config.AppConfig
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
@@ -11,7 +11,7 @@ import mongo.MongoPersistenceClient
 import org.apache.logging.log4j.scala.Logging
 import persistance.{PersistenceException, UserPostedToNotHisGroupException}
 import rest.RequestHandler
-import rest.entities.GroupPost
+import rest.entities.NewGroupPost
 
 import scala.io.StdIn
 import scala.util.control.NonFatal
@@ -39,7 +39,7 @@ object Main extends App with Logging {
     .flatMap(_.unbind()) // trigger unbinding from the port
     .onComplete(_ => system.terminate()) // and shutdown when done
 
-  def routing(requestHandler: RequestHandler) = {
+  def routing(requestHandler: RequestHandler): Route = {
     handleExceptions(exceptionHandler) {
       logDuration {
         get {
@@ -48,7 +48,14 @@ object Main extends App with Logging {
               val userGroups = requestHandler.getUserGroups(userId)
               onSuccess(userGroups) { case l => complete(l) }
             }
-          }
+          } ~
+            pathPrefix("group" / LongNumber) { groupId =>
+              path("feed") {
+                onSuccess(requestHandler.getGroupFeed(groupId)) {
+                  case l => complete(l)
+                }
+              }
+            }
         } ~
           post {
             pathPrefix("user" / LongNumber) { userId =>
@@ -60,7 +67,7 @@ object Main extends App with Logging {
               }
             } ~
               path("group" / LongNumber) { groupId =>
-                entity(as[GroupPost]) { groupPost =>
+                entity(as[NewGroupPost]) { groupPost =>
                   onSuccess(requestHandler.addPostToGroup(groupId, groupPost)) {
                     case Right(postId) => complete(postId)
                     case Left(t: UserPostedToNotHisGroupException) =>

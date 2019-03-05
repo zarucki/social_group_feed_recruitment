@@ -37,12 +37,12 @@ class PostsServiceSpec extends MongoSpec {
 
     assert(
       awaitResults(
-        sut.getLatestPostsForOwners(UserId("nonexistinguser"), after = fixedDateInPast.minusDays(7).toInstant)
+        sut.getLatestPostsForOwner(UserId("nonexistinguser"), after = fixedDateInPast.minusDays(7).toInstant)
       ).map(_.content) == Seq()
     )
 
     assert(
-      awaitResults(sut.getLatestPostsForOwners(group1, after = fixedDateInPast.minusDays(7).toInstant))
+      awaitResults(sut.getLatestPostsForOwner(group1, after = fixedDateInPast.minusDays(7).toInstant))
         .map(_.content) == Seq(
         "content 4 in group 1 from user 3",
         "content 1 in group 1 from user 1",
@@ -51,7 +51,7 @@ class PostsServiceSpec extends MongoSpec {
     )
 
     assert(
-      awaitResults(sut.getLatestPostsForOwners(group1, after = fixedDateInPast.minusMinutes(90).toInstant))
+      awaitResults(sut.getLatestPostsForOwner(group1, after = fixedDateInPast.minusMinutes(90).toInstant))
         .map(_.content) == Seq(
         "content 4 in group 1 from user 3",
         "content 1 in group 1 from user 1"
@@ -59,7 +59,7 @@ class PostsServiceSpec extends MongoSpec {
     )
 
     assert(
-      awaitResults(sut.getLatestPostsForOwners(user1, after = fixedDateInPast.minusDays(7).toInstant))
+      awaitResults(sut.getLatestPostsForOwner(user1, after = fixedDateInPast.minusDays(7).toInstant))
         .map(_.content) == Seq(
         "content 1 in group 1 from user 1",
         "content 3 in group 2 from user 1"

@@ -2,12 +2,13 @@ package mongo
 import java.time.{Clock, ZonedDateTime}
 
 import config.AppConfig
+import mongo.entities.Post
 import org.apache.logging.log4j.scala.Logging
-import org.mongodb.scala.MongoWriteException
+import org.mongodb.scala.bson.ObjectId
+import org.mongodb.scala.{MongoWriteException, Observable}
 import persistance.entities.{GroupId, UserId}
 import persistance.{DuplicateWriteException, PersistenceClient}
-import rest.entities.UserGroup
-import services.{CachedMongoFeedService, MongoFeedService}
+import services.{CachedMongoFeedService, FeedService, MongoFeedService}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,7 +28,8 @@ class MongoPersistenceClient private (appConfig: AppConfig)(implicit executionCo
   private val mongoDB = MongoHelper.getMongoDBWhichUnderstandsEntities(mongoClient, appConfig.dbName)
 
   private val membershipService = new MembershipService(mongoDB)
-  private val cachedMongoFeedService = new CachedMongoFeedService(mongoDB, new MongoFeedService(mongoDB))
+  private val feedService: FeedService[Observable, ObjectId] =
+    new CachedMongoFeedService(mongoDB, new MongoFeedService(mongoDB))
 
   override def init(): Future[MongoPersistenceClient] = {
 
@@ -44,10 +46,9 @@ class MongoPersistenceClient private (appConfig: AppConfig)(implicit executionCo
       }
   }
 
-  override def getUserGroups(userId: UserId): Future[Seq[UserGroup]] = {
+  override def getUserGroups(userId: UserId): Future[Seq[String]] = {
     membershipService
       .getAllGroupsForUser(userId)
-      .map(UserGroup(_))
       .toFuture()
   }
 
@@ -73,7 +74,7 @@ class MongoPersistenceClient private (appConfig: AppConfig)(implicit executionCo
       content: String,
       userName: String
   ): Future[Either[Throwable, String]] = {
-    cachedMongoFeedService
+    feedService
       .postOnGroup(
         userId = userId,
         groupId = groupId,
@@ -83,5 +84,9 @@ class MongoPersistenceClient private (appConfig: AppConfig)(implicit executionCo
       )
       .head()
       .map { _.right.map(_.toString) }
+  }
+
+  override def getGroupFeed(groupId: Long): Future[Seq[Post]] = {
+    feedService.getTopPostsForGroup(GroupId(groupId)).collect().toFuture()
   }
 }

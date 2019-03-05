@@ -83,7 +83,7 @@ class PostsService(mongoDatabase: MongoDatabase) extends Logging {
     }
   }
 
-  def getLatestPostsForOwners(ownerId: PersistenceContentOwnerId, after: Instant): Observable[Post] = {
+  def getLatestPostsForOwner(ownerId: PersistenceContentOwnerId, after: Instant): Observable[Post] = {
     getLatestPostsForOwners(Seq(ownerId.id), after)
   }
 
@@ -92,8 +92,6 @@ class PostsService(mongoDatabase: MongoDatabase) extends Logging {
   }
 
   def getPostsForOwners(ownerIds: Seq[String], after: ObjectId, before: Option[ObjectId] = None): Observable[Post] = {
-    throwExceptionIfSequenceHasDuplicates(ownerIds)
-
     for {
       postIds     <- getLatestPostsIdsForOwners(ownerIds, after, before).collect()
       fetchedPost <- fetchPostsByIds(postIds)
@@ -102,7 +100,6 @@ class PostsService(mongoDatabase: MongoDatabase) extends Logging {
 
   def fetchPostsByIds(postIds: Seq[ObjectId]): Observable[Post] = {
     // TODO: watch out for to huge seqs here?
-    throwExceptionIfSequenceHasDuplicates(postIds)
 
     if (postIds.isEmpty) {
       Observable(List.empty)
@@ -117,7 +114,6 @@ class PostsService(mongoDatabase: MongoDatabase) extends Logging {
   def throwExceptionIfSequenceHasDuplicates[T](seq: Seq[T]) = {
     if (seq.toSet.size != seq.size) {
       logger.error("There are duplicates in: " + seq)
-      throw new Exception("Probably something weird happening, cause I got duplicates in: " + seq)
     }
   }
 }

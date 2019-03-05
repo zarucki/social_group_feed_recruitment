@@ -1,12 +1,39 @@
 #!/bin/bash
 dir=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
-USER_ID=${1:-USER_ID}
 
-./addUserToGroup.sh "$USER_ID" 1
+./addUserToGroup.sh 1 1
 echo $'\n\n'
-./addUserToGroup.sh "$USER_ID" 2
+
+./addUserToGroup.sh 1 2
 echo $'\n\n'
-./getUserGroups.sh "$USER_ID"
+
+./addUserToGroup.sh 2 2
 echo $'\n\n'
-./makePostToGroupByUser.sh 1 "$USER_ID" "my first message" "user name 1"
+
+./getUserGroups.sh 1
+echo $'\n\n'
+
+./getUserGroups.sh 2
+echo $'\n\n'
+
+./makePostToGroupByUser.sh 1 1 "my first message" "user name 1"
+echo $'\n\n'
+
+sleep 5
+
+./makePostToGroupByUser.sh 2 1 "my second message" "user name 1"
+echo $'\n\n'
+
+sleep 5
+
+./makePostToGroupByUser.sh 2 2 "my 1st msg" "user name 2"
+echo $'\n\n'
+
+./makePostToGroupByUser.sh 1 2 "lets try hacking into other group" "user name 2"
+echo $'\n\n'
+
+./getGroupFeed.sh 1
+echo $'\n\n'
+
+./getGroupFeed.sh 2
 echo $'\n\n'

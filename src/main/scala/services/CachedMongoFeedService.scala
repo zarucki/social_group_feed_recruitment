@@ -120,4 +120,9 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
         }
       }
   }
+
+  // TODO: for now we cache only user stuff bet we could also cache top group feed, though it is not as expensive to fetch
+  override def getTopPostsForGroup(groupId: GroupId): Observable[Post] = {
+    underlyingService.getTopPostsForGroup(groupId)
+  }
 }
