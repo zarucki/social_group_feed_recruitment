@@ -2,16 +2,18 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{Directive, RejectionHandler}
+import akka.http.scaladsl.server.{Directive, ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
 import config.AppConfig
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
 import mongo.MongoPersistenceClient
 import org.apache.logging.log4j.scala.Logging
+import persistance.PersistenceException
 import rest.RequestHandler
 
 import scala.io.StdIn
+import scala.util.control.NonFatal
 
 object Main extends App with Logging {
   implicit val system = ActorSystem("feed-system")
@@ -36,20 +38,22 @@ object Main extends App with Logging {
     .onComplete(_ => system.terminate()) // and shutdown when done
 
   def routing(requestHandler: RequestHandler) = {
-    logDuration {
-      get {
-        pathPrefix("user") {
-          pathPrefix(LongNumber) { userId =>
-            path("groups") {
-              val userGroups = requestHandler.getUserGroups(userId)
-              onSuccess(userGroups) { case l => complete(l) }
-            } ~
-              path("add-to-group" / LongNumber) { groupId =>
-                onSuccess(requestHandler.addUserToGroup(userId, groupId)) {
-                  logger.info(s"user $userId successfully added to group $groupId")
-                  complete(StatusCodes.OK)
+    handleExceptions(exceptionHandler) {
+      logDuration {
+        get {
+          pathPrefix("user") {
+            pathPrefix(LongNumber) { userId =>
+              path("groups") {
+                val userGroups = requestHandler.getUserGroups(userId)
+                onSuccess(userGroups) { case l => complete(l) }
+              } ~
+                path("add-to-group" / LongNumber) { groupId =>
+                  onSuccess(requestHandler.addUserToGroup(userId, groupId)) {
+                    logger.info(s"user $userId successfully added to group $groupId")
+                    complete(StatusCodes.OK)
+                  }
                 }
-              }
+            }
           }
         }
       }
@@ -67,6 +71,17 @@ object Main extends App with Logging {
         logger.info(s"[${resp.status.intValue()}] ${ctx.request.method.name} ${ctx.request.uri} took: ${d}ms")
         resp
       } & handleRejections(rejectionHandler)
+    }
+  }
+
+  def exceptionHandler = {
+    ExceptionHandler {
+      case ex: PersistenceException =>
+        logger.error("Persistence threw error.", ex)
+        complete(StatusCodes.Forbidden -> "Illegal operation.")
+      case NonFatal(ex: Exception) =>
+        logger.error("I crashed hard.", ex)
+        complete(StatusCodes.BadRequest)
     }
   }
 }

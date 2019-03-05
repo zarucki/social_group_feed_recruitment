@@ -1,6 +1,7 @@
 package rest
 
 import config.AppConfig
+import org.apache.logging.log4j.scala.Logging
 import persistance.PersistenceClient
 import persistance.entities._
 
@@ -8,7 +9,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class RequestHandler(appConfig: AppConfig, persistenceClient: PersistenceClient[Future])(
     implicit executionContext: ExecutionContext
-) {
+) extends Logging {
   def getUserGroups(userId: Long): Future[List[UserGroup]] = {
     persistenceClient.getUserGroups(UserId(userId)).map(_.toList)
   }

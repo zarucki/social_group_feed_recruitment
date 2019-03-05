@@ -1,8 +1,8 @@
 package mongo
 import config.AppConfig
 import org.apache.logging.log4j.scala.Logging
-import org.mongodb.scala.{MongoClient, MongoDatabase}
-import persistance.PersistenceClient
+import org.mongodb.scala.{MongoClient, MongoDatabase, MongoWriteException}
+import persistance.{DuplicateWriteException, PersistenceClient}
 import persistance.entities.{GroupId, UserGroup, UserId}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -10,19 +10,19 @@ import scala.concurrent.{ExecutionContext, Future}
 object MongoPersistenceClient {
   def apply(appConfig: AppConfig)(implicit executionContext: ExecutionContext): Future[MongoPersistenceClient] = {
     val client = new MongoPersistenceClient(appConfig)
-    client.init().map { _ =>
-      client
-    }
+    client.init()
   }
 }
 
-class MongoPersistenceClient private (appConfig: AppConfig) extends PersistenceClient[Future] with Logging {
+class MongoPersistenceClient private (appConfig: AppConfig)(implicit executionContext: ExecutionContext)
+    extends PersistenceClient[Future]
+    with Logging {
   private val mongoClient = MongoHelper.getMongoClient(appConfig.connectionString)
   private val mongoDB = MongoHelper.getMongoDBWhichUnderstandsEntities(mongoClient, appConfig.dbName)
 
   private val membershipService = new MembershipService(mongoDB)
 
-  override def init(): Future[Unit] = {
+  override def init(): Future[MongoPersistenceClient] = {
 
     MongoHelper
       .createIndexesIfMissing(mongoDB)
@@ -32,6 +32,9 @@ class MongoPersistenceClient private (appConfig: AppConfig) extends PersistenceC
         ()
       }
       .head()
+      .map { _ =>
+        this
+      }
   }
 
   override def getUserGroups(userId: UserId): Future[Seq[UserGroup]] = {
@@ -49,5 +52,11 @@ class MongoPersistenceClient private (appConfig: AppConfig) extends PersistenceC
       .addUserToGroup(userId, groupId)
       .map(_ => ())
       .head()
+      .recoverWith {
+        case ex: MongoWriteException =>
+          Future.failed(
+            new DuplicateWriteException(s"Can't insert duplicate. User $userId is already in group $groupId.", ex)
+          )
+      }
   }
 }
