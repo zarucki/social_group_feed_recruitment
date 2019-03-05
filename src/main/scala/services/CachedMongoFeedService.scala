@@ -58,15 +58,9 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
         )
         val postsNewerThanAfter = postsFromCache.takeWhile(_.getTimestamp > afterObjectId.getTimestamp)
         if (postsNewerThanAfter.size == postsFromCache.size) {
-          logger.debug(s"Not good enough, using fresh")
           // if all posts are newer than our after, than cache probably doesn't have all results we need
-//          underlyingService.getTopPostsFromAllUserGroups(userId, after)
-          logger.debug("was before: " + postsFromCache)
-          // TODO: why this crashes
-          //          loadFreshResultsIntoCache(userId.id, underlyingService.getTopPostsFromAllUserGroups(userId, after), identity)
-          underlyingService.getTopPostsFromAllUserGroups(userId, after)
+          loadFreshResultsIntoCache(userId.id, underlyingService.getTopPostsFromAllUserGroups(userId, after), identity)
         } else {
-          logger.debug(s"Good enough using as is.")
           postService.fetchPostsByIds(postsNewerThanAfter)
         }
       } else {

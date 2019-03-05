@@ -1,4 +1,4 @@
-import java.time.{Duration => JDuration}
+import java.time.{ZonedDateTime, Duration => JDuration}
 
 import org.mongodb.scala.Observable
 import org.mongodb.scala.bson.ObjectId
@@ -98,6 +98,59 @@ class CachedMongoFeedServiceSpec extends MongoFeedServiceSpec {
           (1549062000, "second group is much better", group2.id),
           (1548979200, "second group is better", group2.id),
           (1548914400, "out of nowhere", group1.id),
+          (1548896400, "second post", group1.id),
+          (1548807300, "first post", group1.id)
+        )
+    )
+  }
+
+  it should "remove cache if there is a membership change" in {
+    oneUserTwoGroupsDataSetup()
+
+    assert(awaitResults(timelineCacheService.getTimelineCacheObjectForOwner(user1.id)) == Seq())
+
+    implicit val clock = java.time.Clock.systemUTC()
+
+    assert(
+      awaitResults(
+        sut.getTopPostsFromAllUserGroups(
+          user1,
+          untilPostCount = 4,
+          noOlderThan = fixedDateInPast.minusDays(7).toInstant,
+          timeSpanRequestedInOneRequest = JDuration.ofHours(1)
+        )
+      ).map(postToTestTuple) ==
+        List(
+          (1549062000, "second group is much better", group2.id),
+          (1548979200, "second group is better", group2.id),
+          (1548896400, "second post", group1.id),
+          (1548807300, "first post", group1.id)
+        )
+    )
+
+    val timelineCacheObjectInitialState =
+      awaitResults(timelineCacheService.getTimelineCacheObjectForOwner(user1.id)).headOption
+
+    assert(timelineCacheObjectInitialState.map(_.topPostIds).getOrElse(Seq.empty).nonEmpty)
+
+    awaitResults(getMembershipService().addUserToGroup(user1, group3))
+    awaitResults(sut.postOnGroup(user1, group3, "fresh content on 3", fixedDateInPast.minusMinutes(10)))
+
+    assert(awaitResults(timelineCacheService.getTimelineCacheObjectForOwner(user1.id)).isEmpty)
+
+    assert(
+      awaitResults(
+        sut.getTopPostsFromAllUserGroups(
+          user1,
+          untilPostCount = 5,
+          noOlderThan = fixedDateInPast.minusDays(7).toInstant,
+          timeSpanRequestedInOneRequest = JDuration.ofHours(1)
+        )
+      ).map(postToTestTuple) ==
+        List(
+          (1549065000, "fresh content on 3", group3.id),
+          (1549062000, "second group is much better", group2.id),
+          (1548979200, "second group is better", group2.id),
           (1548896400, "second post", group1.id),
           (1548807300, "first post", group1.id)
         )

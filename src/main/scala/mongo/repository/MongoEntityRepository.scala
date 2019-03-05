@@ -2,7 +2,7 @@ package mongo.repository
 
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.UpdateOptions
-import org.mongodb.scala.result.UpdateResult
+import org.mongodb.scala.result.{DeleteResult, UpdateResult}
 import org.mongodb.scala.{Completed, FindObservable, MongoCollection, MongoDatabase, Observable, SingleObservable}
 
 import scala.reflect.ClassTag
@@ -14,6 +14,10 @@ abstract class MongoEntityRepository[TEntity](mongoDatabase: MongoDatabase)(
 
   def put(entity: TEntity): Observable[Completed] = {
     getEntityCollection().insertOne(entity)
+  }
+
+  def delete(filter: Bson): SingleObservable[DeleteResult] = {
+    getEntityCollection().deleteOne(filter)
   }
 
   def updateMany(filter: Bson, update: Bson, options: UpdateOptions): SingleObservable[UpdateResult] = {
