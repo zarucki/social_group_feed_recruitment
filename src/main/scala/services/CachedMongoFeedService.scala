@@ -34,7 +34,7 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
     allGroupUsersIds.map(_.toSet).flatMap { userIds =>
       if (userIds.contains(userId.id)) {
         postService.addPostToGroup(userId, groupId, content, createdAt).flatMap { postId =>
-          timelineCacheService.updateAllOwnersCachedTimelinesWithNewPost(userIds.toSeq, postId).map { _ =>
+          timelineCacheService.updateExistingCachedTimelinesWithNewPost(userIds.toSeq, postId).map { _ =>
             postId
           }
         }

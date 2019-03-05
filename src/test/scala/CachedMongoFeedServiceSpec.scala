@@ -13,7 +13,7 @@ class CachedMongoFeedServiceSpec extends MongoFeedServiceSpec {
   it should "use caching" in {
     oneUserTwoGroupsDataSetup()
 
-    assert(awaitResults(timelineCacheService.getCachedTimelineForOwner(user1.id)) == Seq())
+    assert(awaitResults(timelineCacheService.getTimelineCacheObjectForOwner(user1.id)) == Seq())
 
     implicit val clock = java.time.Clock.systemUTC()
 
@@ -34,8 +34,11 @@ class CachedMongoFeedServiceSpec extends MongoFeedServiceSpec {
         )
     )
 
+    val timelineCacheObjectInitialState =
+      awaitResults(timelineCacheService.getTimelineCacheObjectForOwner(user1.id)).headOption
+
     assert(
-      awaitResults(timelineCacheService.getCachedTimelineForOwner(user1.id)).map(_.getTimestamp) == Seq(
+      timelineCacheObjectInitialState.map(_.topPostIds.map(_.getTimestamp)).getOrElse(Seq.empty) == Seq(
         1549062000,
         1548979200,
         1548896400,
@@ -63,14 +66,23 @@ class CachedMongoFeedServiceSpec extends MongoFeedServiceSpec {
 
     awaitResults(sut.postOnGroup(user1, group1, "out of nowhere", fixedDateInPast.minusDays(2).plusHours(6)))
 
+    val timelineCacheObjectAfterOneInsert =
+      awaitResults(timelineCacheService.getTimelineCacheObjectForOwner(user1.id)).headOption
+
     assert(
-      awaitResults(timelineCacheService.getCachedTimelineForOwner(user1.id)).map(_.getTimestamp) == Seq(
+      timelineCacheObjectAfterOneInsert.map(_.topPostIds.map(_.getTimestamp)).getOrElse(Seq.empty) == Seq(
         1549062000,
         1548979200,
         1548914400,
         1548896400,
         1548807300
       )
+    )
+
+    assert(
+      timelineCacheObjectAfterOneInsert
+        .map(_.lastUpdated)
+        .exists(_.isAfter(timelineCacheObjectInitialState.get.lastUpdated))
     )
 
     assert(
