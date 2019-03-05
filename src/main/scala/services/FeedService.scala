@@ -1,13 +1,11 @@
 package services
 
-import java.time.{Clock, Instant, ZonedDateTime, Duration => JDuration}
+import java.time.{Instant, ZonedDateTime, Duration => JDuration}
 
 import mongo.entities.{GroupId, Post, UserId}
 
 trait FeedService[F[_], TEntityId] {
-  def postOnGroup(userId: UserId, groupId: GroupId, content: String, createdAt: ZonedDateTime)(
-      implicit clock: Clock
-  ): F[TEntityId]
+  def postOnGroup(userId: UserId, groupId: GroupId, content: String, createdAt: ZonedDateTime): F[TEntityId]
 
   def getTopPostsFromAllUserGroups(userId: UserId, after: Instant): F[Post]
 
@@ -16,5 +14,5 @@ trait FeedService[F[_], TEntityId] {
       untilPostCount: Int,
       noOlderThan: Instant,
       timeSpanRequestedInOneRequest: JDuration
-  )(implicit clock: Clock): F[Post]
+  ): F[Post]
 }

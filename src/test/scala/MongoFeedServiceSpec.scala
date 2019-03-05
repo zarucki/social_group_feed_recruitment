@@ -7,6 +7,8 @@ import org.mongodb.scala.bson.ObjectId
 import services.{FeedService, MongoFeedService}
 
 class MongoFeedServiceSpec extends MongoSpec {
+  implicit val clock = java.time.Clock.systemUTC()
+
   protected val oldestContentDate = fixedDateInPast.minusDays(7).minusHours(1)
 
   it should "return empty collection if the user is not in any group" in {
@@ -370,7 +372,6 @@ class MongoFeedServiceSpec extends MongoSpec {
     } yield ()
 
     awaitResults(setupMemberships)
-    val utcZoneId = ZoneId.of("UTC")
 
     implicit val clock = java.time.Clock.fixed(fixedDateInPast.toInstant, utcZoneId)
 

@@ -7,18 +7,21 @@ import mongo.{MembershipService, PostsService}
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.{Completed, MongoDatabase, Observable}
 
-class MongoFeedService(mongoDatabase: MongoDatabase) extends FeedService[Observable, ObjectId] {
+class MongoFeedService(mongoDatabase: MongoDatabase)(implicit clock: Clock) extends FeedService[Observable, ObjectId] {
   private val postService = new PostsService(mongoDatabase)
   private val membershipService = new MembershipService(mongoDatabase)
 
-  def postOnGroup(userId: UserId, groupId: GroupId, content: String, createdAt: ZonedDateTime)(
-      implicit clock: Clock
+  override def postOnGroup(
+      userId: UserId,
+      groupId: GroupId,
+      content: String,
+      createdAt: ZonedDateTime
   ): Observable[ObjectId] = {
     // TODO: check permissions!!
     postService.addPostToGroup(userId, groupId, content, createdAt)
   }
 
-  def getTopPostsFromAllUserGroups(userId: UserId, after: Instant): Observable[Post] = {
+  override def getTopPostsFromAllUserGroups(userId: UserId, after: Instant): Observable[Post] = {
     for {
       groupIds <- membershipService.getAllGroupsForUser(userId).collect()
       post     <- postService.getLatestPostsForOwners(groupIds, after)
@@ -26,13 +29,11 @@ class MongoFeedService(mongoDatabase: MongoDatabase) extends FeedService[Observa
   }
 
   // will be useful for getting first page
-  def getTopPostsFromAllUserGroups(
+  override def getTopPostsFromAllUserGroups(
       userId: UserId,
       untilPostCount: Int,
       noOlderThan: Instant,
       timeSpanRequestedInOneRequest: JDuration
-  )(
-      implicit clock: Clock
   ): Observable[Post] = {
     val now = ZonedDateTime.now(clock)
 

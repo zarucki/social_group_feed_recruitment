@@ -1,5 +1,6 @@
 package services
 import java.time.{Clock, Duration, Instant, ZonedDateTime}
+import java.util.Date
 import java.util.concurrent.atomic.AtomicInteger
 
 import mongo.entities.{GroupId, Post, UserId}
@@ -9,8 +10,9 @@ import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.{MongoDatabase, Observable}
 
 // TODO: fetching group timeline?
-class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: FeedService[Observable, ObjectId])
-    extends FeedService[Observable, ObjectId]
+class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: FeedService[Observable, ObjectId])(
+    implicit clock: Clock
+) extends FeedService[Observable, ObjectId]
     with Logging {
   private val cacheHits = new AtomicInteger(0)
   private val cacheMisses = new AtomicInteger(0)
@@ -26,7 +28,7 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
       groupId: GroupId,
       content: String,
       createdAt: ZonedDateTime
-  )(implicit clock: Clock): Observable[ObjectId] = {
+  ): Observable[ObjectId] = {
     val allGroupUsersIds = membershipService.getAllUsersForGroup(groupId).collect()
 
     allGroupUsersIds.map(_.toSet).flatMap { userIds =>
@@ -47,9 +49,30 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
       userId: UserId,
       after: Instant
   ): Observable[Post] = {
-    // TODO: use cache here?
-    underlyingService.getTopPostsFromAllUserGroups(userId, after)
-    // check if we can satisfy this from cache if not fallback to old
+    val afterObjectId = new ObjectId(Date.from(after), 0)
+
+    timelineCacheService.getCachedTimelineForOwner(userId.id).collect().flatMap { postsFromCache =>
+      if (postsFromCache.nonEmpty) {
+        logger.debug(
+          s"Got cache hit for $userId and $after with ${postsFromCache.size} posts, not sure if good enough for us."
+        )
+        val postsNewerThanAfter = postsFromCache.takeWhile(_.getTimestamp > afterObjectId.getTimestamp)
+        if (postsNewerThanAfter.size == postsFromCache.size) {
+          logger.debug(s"Not good enough, using fresh")
+          // if all posts are newer than our after, than cache probably doesn't have all results we need
+//          underlyingService.getTopPostsFromAllUserGroups(userId, after)
+          logger.debug("was before: " + postsFromCache)
+          // TODO: why this crashes
+          //          loadFreshResultsIntoCache(userId.id, underlyingService.getTopPostsFromAllUserGroups(userId, after), identity)
+          underlyingService.getTopPostsFromAllUserGroups(userId, after)
+        } else {
+          logger.debug(s"Good enough using as is.")
+          postService.fetchPostsByIds(postsNewerThanAfter)
+        }
+      } else {
+        loadFreshResultsIntoCache(userId.id, underlyingService.getTopPostsFromAllUserGroups(userId, after), identity)
+      }
+    }
   }
 
   override def getTopPostsFromAllUserGroups(
@@ -57,7 +80,7 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
       untilPostCount: Int,
       noOlderThan: Instant,
       timeSpanRequestedInOneRequest: Duration
-  )(implicit clock: Clock): Observable[Post] = {
+  ): Observable[Post] = {
     // TODO: check if other params also nonstandard, if so don't use cache
     if (untilPostCount > maxCachedPostCountInTimeline) {
       // weird request, asking for more than default, let's just run it on live
@@ -75,22 +98,32 @@ class CachedMongoFeedService(mongoDatabase: MongoDatabase, underlyingService: Fe
             s"Got cache miss for timeline for $userId and $untilPostCount post count."
           )
 
-          underlyingService
-            .getTopPostsFromAllUserGroups(
-              userId,
-              maxCachedPostCountInTimeline,
-              noOlderThan,
-              timeSpanRequestedInOneRequest
-            )
-            .collect()
-            .flatMap { livePosts =>
-              logger.debug(s"Savinng timeline cache for ${userId.id} with ${livePosts.size} posts.")
-              timelineCacheService.cacheTimelineForOwner(userId.id, livePosts.map(_._id)).flatMap { _ =>
-                Observable(livePosts.take(untilPostCount))
-              }
-            }
+          val loadFresh = underlyingService.getTopPostsFromAllUserGroups(
+            userId,
+            maxCachedPostCountInTimeline,
+            noOlderThan,
+            timeSpanRequestedInOneRequest
+          )
+
+          loadFreshResultsIntoCache(userId.id, loadFresh, _.take(untilPostCount))
         }
       }
     }
+  }
+
+  private def loadFreshResultsIntoCache(
+      ownerId: String,
+      load: => Observable[Post],
+      transformBeforeReturning: Seq[Post] => Seq[Post]
+  ): Observable[Post] = {
+
+    load
+      .collect()
+      .flatMap { livePosts =>
+        logger.debug(s"Saving timeline cache for ${ownerId} with ${livePosts.size} posts.")
+        timelineCacheService.cacheTimelineForOwner(ownerId, livePosts.map(_._id)).flatMap { _ =>
+          Observable(transformBeforeReturning(livePosts))
+        }
+      }
   }
 }
