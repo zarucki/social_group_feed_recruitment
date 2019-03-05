@@ -6,6 +6,7 @@ object MongoKeyNames {
   val groupIdKey: String = "gid"
   val ownerIdKey: String = "oid"
   val postIdKey: String = "pid"
+  val lastUpdatedKey: String = "lu"
 
   type OwnerId = String
 }

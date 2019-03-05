@@ -1,5 +1,7 @@
 package mongo
 
+import java.util.concurrent.{TimeUnit => JTimeUnit}
+
 import com.mongodb.ConnectionString
 import mongo.entities._
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
@@ -8,10 +10,11 @@ import org.mongodb.scala.bson.codecs.Macros._
 import org.mongodb.scala.{MongoClient, MongoClientSettings, MongoDatabase, Observable, SingleObservable}
 
 object MongoHelper {
-  private val collectionAndTheirIndexes = Map(
+  private def collectionAndTheirIndexes(ttlIndexConfig: TTLIndexSettings) = Map(
     UserGroup.collection -> UserGroup.indexes,
     GroupUserMember.collection -> GroupUserMember.indexes,
-    PostOwnership.collection -> PostOwnership.indexes
+    PostOwnership.collection -> PostOwnership.indexes,
+    TimelineCache.collection -> Seq(TimelineCache.ttlIndex(ttlIndexConfig))
   )
 
   def getMongoClient(connectionString: String): MongoClient = {
@@ -30,7 +33,8 @@ object MongoHelper {
         classOf[Post],
         classOf[UserGroup],
         classOf[GroupUserMember],
-        classOf[PostOwnership]
+        classOf[PostOwnership],
+        classOf[TimelineCache]
       ),
       DEFAULT_CODEC_REGISTRY
     )
@@ -39,10 +43,14 @@ object MongoHelper {
   }
 
   // TODO: test this?
-  def createIndexesIfMissing(mongoDatabase: MongoDatabase): Observable[String] = {
-    val collectionAndIndexSeq: Seq[(String, IndexThatShouldBePresent)] = collectionAndTheirIndexes.toSeq.flatMap {
-      case (collection, indexes) => indexes.map(collection -> _)
-    }
+  def createIndexesIfMissing(
+      mongoDatabase: MongoDatabase,
+      ttlIndexSettings: TTLIndexSettings = TTLIndexSettings(24, JTimeUnit.HOURS)
+  ): Observable[String] = {
+    val collectionAndIndexSeq: Seq[(String, IndexThatShouldBePresent)] =
+      collectionAndTheirIndexes(ttlIndexSettings).toSeq.flatMap {
+        case (collection, indexes) => indexes.map(collection -> _)
+      }
 
     collectionAndIndexSeq.foldLeft[Observable[String]](Observable(List.empty)) {
       case (aggr, (collectionName, indexToCheck)) =>

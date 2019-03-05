@@ -2,9 +2,9 @@ import java.time.{ZoneId, Duration => JDuration}
 
 import mongo.entities.{Post, UserId}
 import mongo.{MembershipService, PostsService}
-import services.FeedService
+import services.MongoFeedService
 
-class FeedServiceSpec extends MongoSpec {
+class MongoFeedServiceSpec extends MongoSpec {
   private val oldestContentDate = fixedDateInPast.minusDays(7).minusHours(1)
 
   it should "return empty collection if the user is not in any group" in {
@@ -409,5 +409,5 @@ class FeedServiceSpec extends MongoSpec {
 
   def getMembershipService() = new MembershipService(mongoDB)
   def getPostService() = new PostsService(mongoDB)
-  def sut = new FeedService(mongoDB)
+  def sut = new MongoFeedService(mongoDB)
 }
