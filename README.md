@@ -68,15 +68,15 @@ With running rest server and mongo you can try some curl scripts in `curls` dire
 
 There you can also see how curls for every endpoint should look like more or less.
 
-# Rest paths
+# Rest endpoints
 
 * GET
-** user/{userId}/groups
-** user/{userId}/all-groups-feed
-** group/{groupId}/feed
+  * user/{userId}/groups
+  * user/{userId}/all-groups-feed
+  * group/{groupId}/feed
 * POST
-** user/{user-id}/add-to-group/{group-id} // without any body
-** group/{group-id} // with body {content: String, userId: String, userName: String}
+  * user/{user-id}/add-to-group/{group-id} // without any body
+  * group/{group-id} // with body {content: String, userId: String, userName: String}
 
 # Trade offs and design choices
 
@@ -99,16 +99,65 @@ Main points are following:
 
 # Mongo collections
 
+* `user_groups(userId: String, groupId: String)`
+  * `index (userId: ascending, groupId: ascending) unique = true`
+  * compound key here so we dont have to look at document at all, we have groupId we are looking for right there in the index
+  * `userId` could be a shard key - index prefixes work with sharding
+* `group_user_members(groupId: String, userId: String)`
+  * `index (groupId: ascending, userId: ascending) unique = true`
+  * same as above, but different direction
+  * this redundant collection is used instead of creating second index on user\_groups because we want to have working shard key in other direction as well
+  * `groupId` could be a shard key - index prefixes work with sharding
+* `post_ownerships(ownerId: String, postId: ObjectId)`
+  * `index (ownerId: ascending, postId: descending) unique = true`
+  * descending because we want to have latest posts first
+  * because of order of fields in the index we need to carefully page results, we could get results from some popular group with lot of posts and not see that some later small group has some fresh post
+  * here we save relation between user-\>post and group-\>post
+  * `ownerId` could be a shard key - index prefixes work with sharding
+* `posts(_id, insertedAt: Timestamp, content: String, userId: String, groupId: String, userName: String)`
+  * no additional index, apart from the default one on `_id`. Other ids are here just for convenience, to lookup additional information
+  * we don't store createdAt because we have it inside `_id`, though we loose milliseconds, but it is a tradeoff we can make
+* `timeline_cache(ownerId: String, lastUpdated: Timestamp, topPosts: Array[ObjectId])`
+  * `index(ownerId: ascending) unique true` - for lookup
+  * `index(topPosts: ascending)` - for sorting 
+  * `index(lastUpdated: ascending) time to live - for automatically clearing`
+
+Timeline cache could be implemented in any other store like redis or memcached, but mongo does offer interesting possibilities.
+
+We update multiple `timeline_cache` documents each time new post is posted. It looks something like this:
+
+    update(
+         query: { ownerId: { $in: [ "userId_1", "userId_2", "userId_3" ] } },
+	 update: {
+		 $set: { lastUpdated: new Date(1551833235183) },
+		 $push: {
+		 	tp: {
+				$each: [ newPostObjectId ],
+		 		$slice: 50,
+	 			$sort: -1
+			}
+		}
+	},
+	multi: true,
+	upsert: false 
+    )
+
+* We set `upsert` to false, because we want to update only `timeline_caches` that exist.
+* `slice` operator is very helpful, not only it will put our new post in right place in the array, but also it will truncate end if it will exceed given amount. Thanks to that we don't have to worry that our cache growing too much, or that it will exceed 16mb per document. We have predicatable timeline cache size.
+* Above together with TTL makes it that we don't have to track which users are active, if they are active they will have a cache, and will have fast first feed page
+* We don't really need much more that first feed page, if someone goes deep we can handle them manually, user has more patience when digging in past
 
 
-Sadly I didn't have enough time to write benchmark to measure how would this architecture hold with bigger load.
+Unfortuntately I didn't have enough time to write benchmark to measure how this architecture would hold against some bigger load.
 
 # Lacked time to do
 
-* some benchmarking, to measure performance - some traffic generator
+* some benchmarking, to measure performance - some traffic generator with mix of reading and writing
 * use docker-compose to set up small mongo cluster with replication and sharding
 * authentication of REST using JWT
 
 # Further improvements to be made
 
 * When propagating new group post among all followers we don't have to update all cached timelines at once. World will not end if one user sees one post 1 minute earilier.
+* If group would be really active we don't have to propagate posts to timeline caches one by one. We could make them more lazy and batch them.
+* The `timeline_cache` collection should use in-memory storage, we don't need to persist it, we can loose it all. Also journaling should be off. We need is as fast as possible. If we screw something up we can rebuild the cache. Probably such collection would need to use different storage engine, maybe even be on differently setup mongo node.
