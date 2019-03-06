@@ -34,36 +34,56 @@ Constraints:
 
 >Above are minimum requirements. You're welcome to come up with your own improvements if you wish so, but only as long as complexity is the same or higher than above.
 
-## Solution
+# Solution
 
-# Running
+## Running
 
-The app needs to have running mongodb, there is docker-compose.yml file which starts two services mongo and mongo express util.
-You need to have docker and docker-compose installed. I provided install script for docker-compose which you can run:
+The http server needs to have mongodb running, there is `docker-compose.yml` file which starts two services `mongo` and `mongo express`. `mongo express` is simple management tool to view and manipulate collections.
+
+To use `docker-compose.yml` you need to have docker and docker-compose installed. I provided install script for docker-compose which you can run:
 
     $ sudo ./setup/install-docker-compose.sh
 
 When docker and docker-compose will be ready you can start mongo instance by:
 
-    $ docker-compose up
+    $ docker-compose up -d
 
-To get fresh mongo after some changes you can use docker compose:
+To stop it you can run:
 
-    $ docker-compose down -v && docker-compose up
+    $ docker-compose stop
+
+To get get rid of any existing data and get clean mongo you can delete volumes by running:
+
+    $ docker-compose down -v
 
 The app is http-akka rest server, which you can start by:
 
     $ sbt run
 
-With running rest server and mongo you can try some curl scripts in curls directory. For example there is one longer chain of operations when you run script:
+It listens by default on `localhost:8080`.
+
+With running rest server and mongo you can try some curl scripts in `curls` directory. For example there is one longer chain of operations when you run script:
 
     $ ./curls/moreComplexUserScenario.sh
 
+There you can also see how curls for every endpoint should look like more or less.
+
+# Rest paths
+
+* GET
+** user/{userId}/groups
+** user/{userId}/all-groups-feed
+** group/{groupId}/feed
+* POST
+** user/{user-id}/add-to-group/{group-id} // without any body
+** group/{group-id} // with body {content: String, userId: String, userName: String}
+
 # Trade offs and design choices
 
-Taking into consideraion that I needed to design for really large data, I decided to use MongoDB as persistance layer.
+Taking into consideration that I needed to design for really large data, I decided to use MongoDB as persistance layer. Also I knew you're using it to hold your data, so that's additional plus.
 
-To achive scalability and performance I havily used mongo indexes. Collections and indexes are design in such way that we could later shard them among many nodes (not enough time to do that).
+To achive scalability and performance I havily used mongo indexes. Collections and indexes are designed in such way that we could later shard them among many nodes (not enough time to do that).
+I didn't do much benchmarkin, but I did inspect executions plans to make sure all indexes are in place and we don't hit scan.
 
 The architecture itself is inspired by mongo lab project https://github.com/mongodb-labs/socialite .
 
@@ -75,9 +95,13 @@ Main points are following:
 * When someone posts we see who is subscribed to the group and we update caches of those people
 * Timeline cache has time to live set to some value, so after inactivity the caches clears by itself
 * New post is propagated only to live timeline caches, so it does not have to be always hundred of people caches to update
+* There is no point in storing too much data in timeline cache, content gets old fast in social media, we need to store first page
+
+# Mongo collections
+
+
 
 Sadly I didn't have enough time to write benchmark to measure how would this architecture hold with bigger load.
-
 
 # Lacked time to do
 
