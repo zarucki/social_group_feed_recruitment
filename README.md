@@ -38,7 +38,7 @@ Constraints:
 
 ## Running
 
-The http server needs to have mongodb running, there is `docker-compose.yml` file which starts two services `mongo` and `mongo express`. `mongo express` is simple management tool to view and manipulate collections.
+The http server needs to have mongodb running, there is `docker-compose.yml` file which starts two services `mongo` and `mongo express`. `mongo express` is simple management tool to view and manipulate collections that runs on `0.0.0.0:8081`.
 
 To use `docker-compose.yml` you need to have docker and docker-compose installed. I provided install script for docker-compose which you can run:
 
@@ -157,6 +157,7 @@ Unfortuntately I didn't have enough time to write benchmark to measure how this 
 * use docker-compose to set up small mongo cluster with replication and sharding
 * authentication of REST using JWT
 * proper REST endpoints for paging
+* more and better unit tests
 * better cleaning up ;)
 
 # Further improvements to be made
