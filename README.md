@@ -82,8 +82,8 @@ There you can also see how curls for every endpoint should look like more or les
 
 Taking into consideration that I needed to design for really large data, I decided to use MongoDB as persistance layer. Also I knew you're using it to hold your data, so that's additional plus.
 
-To achive scalability and performance I havily used mongo indexes. Collections and indexes are designed in such way that we could later shard them among many nodes (not enough time to do that).
-I didn't do much benchmarkin, but I did inspect executions plans to make sure all indexes are in place and we don't hit scan.
+To achive scalability and performance I heavily used mongo indexes. Collections and indexes are designed in such way that we could later shard them among many nodes (not enough time to do that).
+I had no time to benchmark properly, but I did inspect executions plans to make sure all indexes are in place and we don't hit scan.
 
 The architecture itself is inspired by mongo lab project https://github.com/mongodb-labs/socialite .
 
@@ -93,9 +93,9 @@ Main points are following:
 * But we don't want to pay storage for users that are not active or dead
 * If such user will come after some time, we will rebuild his cache and he will again have nice experience
 * When someone posts we see who is subscribed to the group and we update caches of those people
-* Timeline cache has time to live set to some value, so after inactivity the caches clears by itself
+* Timeline cache expires after time to live value, so after user inactivity the caches clears by itself
 * New post is propagated only to live timeline caches, so it does not have to be always hundred of people caches to update
-* There is no point in storing too much data in timeline cache, content gets old fast in social media, we need to store first page
+* There is no point in storing too much data in timeline cache, content gets old fast in social media, we only need to store first page
 
 # Mongo collections
 
@@ -142,6 +142,7 @@ We update multiple `timeline_cache` documents each time new post is posted. It l
 	upsert: false 
     )
 
+* We only touch caches of users that are subscribed to given group
 * We set `upsert` to false, because we want to update only `timeline_caches` that exist.
 * `slice` operator is very helpful, not only it will put our new post in right place in the array, but also it will truncate end if it will exceed given amount. Thanks to that we don't have to worry that our cache growing too much, or that it will exceed 16mb per document. We have predicatable timeline cache size.
 * Above together with TTL makes it that we don't have to track which users are active, if they are active they will have a cache, and will have fast first feed page
@@ -155,9 +156,12 @@ Unfortuntately I didn't have enough time to write benchmark to measure how this 
 * some benchmarking, to measure performance - some traffic generator with mix of reading and writing
 * use docker-compose to set up small mongo cluster with replication and sharding
 * authentication of REST using JWT
+* proper REST endpoints for paging
+* better cleaning up ;)
 
 # Further improvements to be made
 
-* When propagating new group post among all followers we don't have to update all cached timelines at once. World will not end if one user sees one post 1 minute earilier.
+* When propagating new group post among all followers we don't have to update all cached timelines at once. We could do this lazily. World will not end if some users see a post 1 minute later.
 * If group would be really active we don't have to propagate posts to timeline caches one by one. We could make them more lazy and batch them.
 * The `timeline_cache` collection should use in-memory storage, we don't need to persist it, we can loose it all. Also journaling should be off. We need is as fast as possible. If we screw something up we can rebuild the cache. Probably such collection would need to use different storage engine, maybe even be on differently setup mongo node.
+* Don't throw out whole cache if membership changes - in some cases it doesn't affect feed at all
